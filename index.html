@@ -53,6 +53,7 @@
                                        {id:5,harga:150000,pctPK:15,pctRS:15,pctBisnis:70},
                                        {id:6,harga:200000,pctPK:15,pctRS:12,pctBisnis:73},
                                      ];
+      S.pencairan = data.pencairan ? Object.entries(data.pencairan).map(([k,v])=>({...v,_key:k})) : [];
       S.bonus     = data.bonus || {t1:10,a1:100000,t2:20,a2:250000};
       showDbStatus('connected');
       // re-render current page if already logged in
@@ -598,6 +599,43 @@ tr:hover td{background:rgba(250,246,242,.8)}
   <div class="mfoot"><button class="btn btn-o" onclick="closeOv('mo-kurir')">Batal</button><button class="btn btn-p" onclick="saveKurir()">Daftarkan</button></div>
 </div></div>
 
+<!-- Modal edit status order -->
+<div class="ov" id="mo-edit-status"><div class="modal">
+  <div class="mtitle">✏️ Edit Order</div>
+  <input type="hidden" id="es-key">
+  <div class="fg">
+    <div class="fi full"><label class="flb">Nama Buket</label><input class="finp" type="text" id="es-nama" readonly style="background:var(--warm);color:var(--mist)"></div>
+    <div class="fi full"><label class="flb">Status Order</label><select class="fsel" id="es-status">
+      <option value="proses">Diproses</option>
+      <option value="kirim">Dikirim</option>
+      <option value="lunas">Lunas</option>
+    </select></div>
+    <div class="fi full"><label class="flb">Catatan (opsional)</label><input class="finp" type="text" id="es-catatan" placeholder="Tambah catatan…"></div>
+  </div>
+  <div class="mfoot">
+    <button class="btn btn-o" onclick="closeOv('mo-edit-status')">Batal</button>
+    <button class="btn btn-p" onclick="saveEditStatus()">Simpan</button>
+  </div>
+</div></div>
+
+<!-- Modal pencairan komisi -->
+<div class="ov" id="mo-pencairan"><div class="modal">
+  <div class="mtitle">💸 Catat Pencairan</div>
+  <input type="hidden" id="pc-type"> <!-- 'reseller' or 'perangkai' -->
+  <input type="hidden" id="pc-id">
+  <div class="fg">
+    <div class="fi full"><label class="flb">Nama</label><input class="finp" type="text" id="pc-nama" readonly style="background:var(--warm);color:var(--mist)"></div>
+    <div class="fi full"><label class="flb">Jumlah Dicairkan (Rp)</label><input class="finp" type="number" id="pc-jumlah" placeholder="e.g. 150000"></div>
+    <div class="fi full"><label class="flb">Tanggal Pencairan</label><input class="finp" type="date" id="pc-tgl"></div>
+    <div class="fi full"><label class="flb">Keterangan</label><input class="finp" type="text" id="pc-ket" placeholder="e.g. Transfer BCA, Tunai, dll"></div>
+  </div>
+  <div id="pc-saldo-info" style="margin-top:10px;padding:12px;background:var(--warm);border-radius:9px;font-size:12px"></div>
+  <div class="mfoot">
+    <button class="btn btn-o" onclick="closeOv('mo-pencairan')">Batal</button>
+    <button class="btn btn-p" onclick="savePencairan()">Catat Pencairan</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -620,7 +658,8 @@ let S = {
     {id:5, harga:150000, pctPK:15, pctRS:15, pctBisnis:70},
     {id:6, harga:200000, pctPK:15, pctRS:12, pctBisnis:73},
   ],
-  bonus: {t1:10, a1:100000, t2:20, a2:250000}
+  bonus: {t1:10, a1:100000, t2:20, a2:250000},
+  pencairan: []
 };
 
 // ═══════════════════ SIDEBAR TOGGLE ═══════════════════
@@ -724,7 +763,7 @@ const PTITLES={
   perangkai:'Manajemen Perangkai',kurir:'Manajemen Kurir',
   fee:'Tabel Fee & Harga',laporan:'Laporan Penjualan',ranking:'Ranking Reseller',
   'rs-home':'Dashboard Saya','rs-orders':'Order Saya','rs-komisi':'Komisi & Bonus','rs-ranking':'Ranking',
-  'pk-home':'Dashboard Saya','pk-orders':'Order Saya','pk-jasa':'Rincian Jasa'
+  'pk-home':'Dashboard Saya','pk-orders':'Order Saya','pk-input':'Input Order','pk-jasa':'Rincian Jasa'
 };
 
 function buildNav(r){
@@ -751,6 +790,7 @@ function buildNav(r){
     <div class="sb-sec">Saya</div>
     <div class="sbi active" onclick="goPage('pk-home',this)"><span class="ico">📊</span>Dashboard</div>
     <div class="sbi" onclick="goPage('pk-orders',this)"><span class="ico">📋</span>Order Saya</div>
+    <div class="sbi" onclick="goPage('pk-input',this)"><span class="ico">➕</span>Input Order</div>
     <div class="sbi" onclick="goPage('pk-jasa',this)"><span class="ico">💰</span>Rincian Jasa</div>`;
 }
 
@@ -765,7 +805,7 @@ function goPage(pg, el){
     perangkai:renderPKList, kurir:renderKurir, fee:renderFee,
     laporan:renderLaporan, ranking:renderRanking,
     'rs-home':renderRsHome,'rs-orders':renderRsOrders,'rs-komisi':renderRsKomisi,'rs-ranking':renderRsRanking,
-    'pk-home':renderPkHome,'pk-orders':renderPkOrders,'pk-jasa':renderPkJasa
+    'pk-home':renderPkHome,'pk-orders':renderPkOrders,'pk-input':renderPkInput,'pk-jasa':renderPkJasa
   })[pg]?.();
 }
 
@@ -916,25 +956,32 @@ async function dbRemove(path) {
 
 // ═══════════════════ SAVE ═══════════════════
 async function saveOrder(){
-  const rsId=document.getElementById('fo-rs').value;
-  const harga=parseFloat(document.getElementById('fo-harga').value);
-  const nama=document.getElementById('fo-nama').value.trim();
+  const rsId = document.getElementById('fo-rs').value;
+  const harga = parseFloat(document.getElementById('fo-harga').value);
+  const nama = document.getElementById('fo-nama').value.trim();
   if(!rsId||!harga||!nama){toast('⚠️ Lengkapi data order');return}
-  const rs=S.resellers.find(r=>r.id==rsId);
-  const pk=S.perangkai.find(p=>p.id==document.getElementById('fo-pk').value);
-  const kr=S.kurir.find(k=>k.id==document.getElementById('fo-kurir').value);
+
+  const rs  = S.resellers.find(r=>r.id==rsId);
+  const isOwner = S.session?.role==='owner';
+  const pk  = isOwner ? S.perangkai.find(p=>p.id==document.getElementById('fo-pk').value) : (S.session?.role==='perangkai'?{id:S.session.id,nama:S.session.nama}:null);
+  const kr  = isOwner ? S.kurir.find(k=>k.id==document.getElementById('fo-kurir').value) : null;
+
+  // Always calculate fees from table — hidden fields might be empty for reseller/perangkai
+  const f = calcFees(harga);
+
   const order = {
-    id:Date.now(), tgl:document.getElementById('fo-tgl').value,
-    rsId:+rsId, rsNama:rs?.nama||'—',
-    pkId:pk?.id||null, pkNama:pk?.nama||'—',
-    kurirId:kr?.id||null, kurirNama:kr?.nama||'—',
+    id: Date.now(),
+    tgl: document.getElementById('fo-tgl').value,
+    rsId: +rsId, rsNama: rs?.nama||'—',
+    pkId: pk?.id||null, pkNama: pk?.nama||'—',
+    kurirId: kr?.id||null, kurirNama: kr?.nama||'—',
     nama, harga,
-    feeP:parseFloat(document.getElementById('fo-fp').value)||0,
-    komisiR:parseFloat(document.getElementById('fo-kr').value)||0,
-    ongkir:parseFloat(document.getElementById('fo-ongkir').value)||0,
-    feeKurir:parseFloat(document.getElementById('fo-fk').value)||0,
-    status:document.getElementById('fo-status').value,
-    catatan:document.getElementById('fo-cat').value
+    feeP:    isOwner ? (parseFloat(document.getElementById('fo-fp').value)||f.feeP) : f.feeP,
+    komisiR: isOwner ? (parseFloat(document.getElementById('fo-kr').value)||f.komisiR) : f.komisiR,
+    ongkir:  isOwner ? (parseFloat(document.getElementById('fo-ongkir').value)||0) : f.ongkir||0,
+    feeKurir:isOwner ? (parseFloat(document.getElementById('fo-fk').value)||0) : 0,
+    status:  document.getElementById('fo-status').value,
+    catatan: document.getElementById('fo-cat').value
   };
   showLoading('Menyimpan order…');
   try {
@@ -986,7 +1033,77 @@ async function delItem(arr, key, cb){
   hideLoading();
 }
 
-// ═══════════════════ OWNER PAGES ═══════════════════
+// ═══════════════════ EDIT STATUS ═══════════════════
+function openEditStatus(key, nama, status, catatan){
+  document.getElementById('es-key').value = key;
+  document.getElementById('es-nama').value = nama;
+  document.getElementById('es-status').value = status;
+  document.getElementById('es-catatan').value = catatan||'';
+  document.getElementById('mo-edit-status').classList.add('open');
+}
+async function saveEditStatus(){
+  const key = document.getElementById('es-key').value;
+  const status = document.getElementById('es-status').value;
+  const catatan = document.getElementById('es-catatan').value;
+  showLoading('Menyimpan…');
+  try {
+    await window._update(window._ref(window._db,'orders/'+key),{status,catatan});
+    closeOv('mo-edit-status'); toast('✅ Status diperbarui!');
+  } catch(e){ toast('❌ Gagal: '+e.message); }
+  hideLoading();
+}
+
+// ═══════════════════ PENCAIRAN ═══════════════════
+function openPencairan(type, id, nama){
+  // hitung total komisi/fee dan total sudah dicairkan
+  let totalHak=0, totalCair=0;
+  if(type==='reseller'){
+    const st = allRsStats().find(r=>r.id==id)||{kom:0,bonus:0};
+    totalHak = st.kom + st.bonus;
+  } else {
+    totalHak = S.orders.filter(o=>o.pkId==id).reduce((s,o)=>s+o.feeP,0);
+  }
+  const pencairanList = (S.pencairan||[]).filter(p=>p.targetId==id);
+  totalCair = pencairanList.reduce((s,p)=>s+p.jumlah,0);
+
+  document.getElementById('pc-type').value = type;
+  document.getElementById('pc-id').value = id;
+  document.getElementById('pc-nama').value = nama;
+  document.getElementById('pc-jumlah').value = '';
+  document.getElementById('pc-tgl').value = today();
+  document.getElementById('pc-ket').value = '';
+  document.getElementById('pc-saldo-info').innerHTML=`
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span>Total Hak:</span><b style="color:var(--bloom)">${rp(totalHak)}</b>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span>Sudah Dicairkan:</span><b style="color:var(--ok)">${rp(totalCair)}</b>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border)">
+      <span><b>Sisa Belum Cair:</b></span><b style="color:var(--gold);font-size:15px">${rp(totalHak-totalCair)}</b>
+    </div>`;
+  document.getElementById('mo-pencairan').classList.add('open');
+}
+async function savePencairan(){
+  const jumlah = parseFloat(document.getElementById('pc-jumlah').value);
+  if(!jumlah||jumlah<=0){toast('⚠️ Masukkan jumlah pencairan');return}
+  const data = {
+    id: Date.now(),
+    type: document.getElementById('pc-type').value,
+    targetId: +document.getElementById('pc-id').value,
+    targetNama: document.getElementById('pc-nama').value,
+    jumlah, tgl: document.getElementById('pc-tgl').value,
+    keterangan: document.getElementById('pc-ket').value
+  };
+  showLoading('Mencatat pencairan…');
+  try {
+    await dbPush('pencairan', data);
+    closeOv('mo-pencairan'); toast('✅ Pencairan dicatat!');
+  } catch(e){ toast('❌ Gagal: '+e.message); }
+  hideLoading();
+}
+
+
 function renderDashboard(){
   const o=S.orders;
   const tO=o.reduce((s,x)=>s+x.harga,0), tP=o.reduce((s,x)=>s+x.feeP,0),
@@ -1033,22 +1150,24 @@ function renderDashboard(){
 
 function renderOrders(){
   document.getElementById('pactions').innerHTML=`<button class="btn btn-p btn-sm" onclick="openOv('mo-order')">+ Tambah Order</button>`;
-  const rows=S.orders.length===0?`<tr><td colspan="12">${empty('📋','Belum ada order')}</td></tr>`:
+  const rows=S.orders.length===0?`<tr><td colspan="8">${empty('📋','Belum ada order')}</td></tr>`:
     S.orders.map((o,i)=>`<tr>
       <td class="txm txsm">${S.orders.length-i}</td><td class="txsm">${o.tgl}</td>
       <td><b>${o.rsNama}</b></td><td>${o.nama}</td>
       <td class="hl">${rp(o.harga)}</td>
-      <td class="txok">${rp(o.feeP)}</td><td class="txok">${rp(o.komisiR)}</td>
-      <td>${rp(o.ongkir)}</td>
-      <td>${o.pkNama!=='—'?o.pkNama:'<span class="txm">—</span>'}</td>
-      <td>${o.kurirNama!=='—'?o.kurirNama:'<span class="txm">—</span>'}</td><td>${rp(o.feeKurir)}</td>
+      <td class="txok">${rp(o.feeP)}</td>
+      <td class="txok">${rp(o.komisiR)}</td>
+      <td>${o.pkNama&&o.pkNama!=='—'?o.pkNama:'<span class="txm">—</span>'}</td>
       <td>${stBadge(o.status)}</td>
-      <td><button class="btn btn-g btn-sm" onclick="delItem('orders',${o.id},renderOrders)">🗑</button></td>
+      <td style="display:flex;gap:4px;flex-wrap:nowrap">
+        <button class="btn btn-o btn-sm" onclick="openEditStatus('${o._key}','${(o.nama||'').replace(/'/g,'')}','${o.status}','${(o.catatan||'').replace(/'/g,'')}')">✏️ Edit</button>
+        <button class="btn btn-g btn-sm" onclick="delItem('orders','${o._key}',renderOrders)">🗑</button>
+      </td>
     </tr>`).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Semua Order</span><span class="badge bm">${S.orders.length} total</span></div>
     <div class="cb"><div class="tbl-wrap"><table><thead><tr>
       <th>#</th><th>Tgl</th><th>Reseller</th><th>Buket</th><th>Harga</th>
-      <th>Fee Perangkai</th><th>Komisi RS</th><th>Ongkir</th><th>Perangkai</th><th>Kurir</th><th>Fee Kurir</th><th>Status</th><th></th>
+      <th>Fee Perangkai</th><th>Komisi RS</th><th>Perangkai</th><th>Status</th><th>Aksi</th>
     </tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 
@@ -1068,7 +1187,8 @@ function renderReseller(){
         <div class="mpin">Password Login <span>${r.pin}</span></div>
         <div style="margin-top:8px"><div class="pt">Target: ${tot}/${S.bonus.t2}</div>
           <div class="pb"><div class="pf" style="width:${pct}%"></div></div></div>
-        <div style="margin-top:8px;display:flex;justify-content:flex-end">
+        <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+          <button class="btn btn-gold btn-sm" onclick="openPencairan('reseller',${r.id},'${r.nama}')">💸 Cairkan</button>
           <button class="btn btn-g btn-sm" onclick="delItem('resellers','${r._key}',renderReseller)">🗑 Hapus</button></div>
       </div>`;
     }).join('');
@@ -1086,7 +1206,10 @@ function renderPKList(){
         <td><span class="badge bb">${p.skill==='semua'?'Semua':p.skill}</span></td>
         <td>${ords.length} order</td><td class="txok">${rp(tf)}</td>
         <td><div class="mpin" style="display:inline-flex;gap:8px;padding:4px 10px">Pass <span style="letter-spacing:1px;font-size:12px;color:var(--gold)">${p.pin}</span></div></td>
-        <td><button class="btn btn-g btn-sm" onclick="delItem('perangkai','${p._key}',renderPKList)">🗑</button></td></tr>`;
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-gold btn-sm" onclick="openPencairan('perangkai',${p.id},'${p.nama}')">💸</button>
+          <button class="btn btn-g btn-sm" onclick="delItem('perangkai','${p._key}',renderPKList)">🗑</button>
+        </td></tr>`;
     }).join('');
   document.getElementById('pcontent').innerHTML=`<div class="ibox">💡 Bagikan <b>nama + PIN</b> kepada perangkai untuk login ke sistem.</div>
     <div class="card"><div class="ch"><span class="ct">Daftar Perangkai</span></div>
@@ -1256,6 +1379,7 @@ function renderLaporan(){
     <div class="tbtn active" onclick="lapTab('rs',this)">Per Reseller</div>
     <div class="tbtn" onclick="lapTab('pk',this)">Per Perangkai</div>
     <div class="tbtn" onclick="lapTab('kr',this)">Per Kurir</div>
+    <div class="tbtn" onclick="lapTab('cair',this)">💸 Pencairan</div>
   </div>
   <div id="lt-rs" class="tpanel active"><div class="card"><div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Reseller</th><th>Order</th><th>Penjualan</th><th>Komisi</th><th>Bonus</th><th>Total</th></tr></thead><tbody>
     ${ars.length===0?`<tr><td colspan="6">${empty('🏪','Belum ada data')}</td></tr>`:ars.map(r=>`<tr><td><b>${r.nama}</b></td><td>${r.tot}</td><td class="hl">${rp(r.pjl)}</td><td class="txok">${rp(r.kom)}</td><td>${r.bonus>0?`<span class="badge bg">🎁 ${rp(r.bonus)}</span>`:'—'}</td><td class="hl">${rp(r.kom+r.bonus)}</td></tr>`).join('')}
@@ -1265,7 +1389,45 @@ function renderLaporan(){
   </tbody></table></div></div></div></div>
   <div id="lt-kr" class="tpanel"><div class="card"><div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Kurir</th><th>Total Antar</th><th>Total Fee</th><th>Kendaraan</th></tr></thead><tbody>
     ${S.kurir.length===0?`<tr><td colspan="4">${empty('🚚','Belum ada kurir')}</td></tr>`:S.kurir.map(k=>{const st=S.orders.filter(o=>o.kurirId==k.id);return`<tr><td><b>${k.nama}</b></td><td>${st.length}</td><td class="txok">${rp(st.reduce((s,o)=>s+o.feeKurir,0))}</td><td><span class="badge bi">${k.kendaraan}</span></td></tr>`;}).join('')}
-  </tbody></table></div></div></div></div>`;
+  </tbody></table></div></div></div></div>
+  <div id="lt-cair" class="tpanel">
+    <div class="card"><div class="ch"><span class="ct">Riwayat Pencairan Komisi & Jasa</span></div><div class="cb">
+    <div class="tbl-wrap"><table><thead><tr><th>Tgl</th><th>Nama</th><th>Tipe</th><th>Jumlah</th><th>Keterangan</th></tr></thead><tbody>
+    ${(S.pencairan||[]).length===0?`<tr><td colspan="5">${empty('💸','Belum ada pencairan dicatat')}</td></tr>`:
+      [...(S.pencairan||[])].sort((a,b)=>b.id-a.id).map(p=>`<tr>
+        <td class="txsm">${p.tgl}</td>
+        <td><b>${p.targetNama}</b></td>
+        <td>${p.type==='reseller'?'<span class="badge bs">Reseller</span>':'<span class="badge bg">Perangkai</span>'}</td>
+        <td class="txok">${rp(p.jumlah)}</td>
+        <td class="txm txsm">${p.keterangan||'—'}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+    </div></div>
+    <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Rekap Saldo per Orang</span></div><div class="cb">
+    <div class="tbl-wrap"><table><thead><tr><th>Nama</th><th>Tipe</th><th>Total Hak</th><th>Sudah Cair</th><th>Sisa</th><th>Aksi</th></tr></thead><tbody>
+    ${[
+      ...S.resellers.map(r=>{
+        const st=allRsStats().find(x=>x.id==r.id)||{kom:0,bonus:0};
+        const hak=st.kom+st.bonus;
+        const cair=(S.pencairan||[]).filter(p=>p.targetId==r.id).reduce((s,p)=>s+p.jumlah,0);
+        return{nama:r.nama,id:r.id,type:'reseller',hak,cair,sisa:hak-cair};
+      }),
+      ...S.perangkai.map(p=>{
+        const hak=S.orders.filter(o=>o.pkId==p.id).reduce((s,o)=>s+o.feeP,0);
+        const cair=(S.pencairan||[]).filter(x=>x.targetId==p.id).reduce((s,x)=>s+x.jumlah,0);
+        return{nama:p.nama,id:p.id,type:'perangkai',hak,cair,sisa:hak-cair};
+      })
+    ].map(x=>`<tr>
+      <td><b>${x.nama}</b></td>
+      <td>${x.type==='reseller'?'<span class="badge bs">Reseller</span>':'<span class="badge bg">Perangkai</span>'}</td>
+      <td class="hl">${rp(x.hak)}</td>
+      <td class="txok">${rp(x.cair)}</td>
+      <td style="font-weight:700;color:${x.sisa>0?'var(--gold)':'var(--ok)'}">${rp(x.sisa)}</td>
+      <td><button class="btn btn-gold btn-sm" onclick="openPencairan('${x.type}',${x.id},'${x.nama}')">💸 Cairkan</button></td>
+    </tr>`).join('')}
+    </tbody></table></div>
+    </div></div>
+  </div>`;
 }
 function lapTab(id,el){document.querySelectorAll('.tbtn').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('lt-'+id).classList.add('active')}
 
@@ -1470,8 +1632,77 @@ function renderPkJasa(){
   </div>`;
 }
 
-// ═══════════════════ TOAST ═══════════════════
+function renderPkInput(){
+  document.getElementById('pactions').innerHTML='';
+  document.getElementById('pcontent').innerHTML=`
+  <div class="card"><div class="ch"><span class="ct">➕ Input Order Baru</span></div><div class="cp">
+    <div class="fg">
+      <div class="fi"><label class="flb">Tanggal</label><input class="finp" type="date" id="pki-tgl"></div>
+      <div class="fi"><label class="flb">Reseller</label><select class="fsel" id="pki-rs">
+        <option value="">— Pilih Reseller —</option>
+        ${S.resellers.map(r=>`<option value="${r.id}">${r.nama}</option>`).join('')}
+      </select></div>
+      <div class="fi"><label class="flb">Harga Jual (Rp)</label>
+        <input class="finp" type="number" id="pki-harga" placeholder="e.g. 75000" oninput="onPkiHargaChange()">
+        <div id="pki-jasa-info" style="font-size:11px;color:var(--bloom);margin-top:3px;font-weight:600"></div>
+      </div>
+      <div class="fi"><label class="flb">Nama / Deskripsi Buket</label>
+        <input class="finp" type="text" id="pki-nama" placeholder="e.g. Buket Wisuda Pink">
+      </div>
+      <div class="fi full"><label class="flb">Catatan</label>
+        <input class="finp" type="text" id="pki-cat" placeholder="Opsional…">
+      </div>
+    </div>
+    <div id="pki-preview" style="display:none;margin-top:12px;padding:12px;background:var(--blush);border-radius:9px;text-align:center">
+      <div class="txm txsm">Jasa kamu untuk order ini</div>
+      <div id="pki-jasa-display" style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--bloom)">Rp 0</div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end">
+      <button class="btn btn-p" onclick="savePkOrder()">Simpan Order</button>
+    </div>
+  </div></div>`;
+  document.getElementById('pki-tgl').value = today();
+}
+
+function onPkiHargaChange(){
+  const harga = parseFloat(document.getElementById('pki-harga').value)||0;
+  if(!harga){ document.getElementById('pki-preview').style.display='none'; return; }
+  const f = calcFees(harga);
+  document.getElementById('pki-jasa-info').textContent = f.feeP>0 ? `Jasa kamu: ${rp(f.feeP)} (${f.pctPK}%)` : '';
+  document.getElementById('pki-jasa-display').textContent = rp(f.feeP);
+  document.getElementById('pki-preview').style.display = 'block';
+}
+
+async function savePkOrder(){
+  const rsId  = document.getElementById('pki-rs').value;
+  const harga = parseFloat(document.getElementById('pki-harga').value);
+  const nama  = document.getElementById('pki-nama').value.trim();
+  if(!rsId||!harga||!nama){ toast('⚠️ Lengkapi data order'); return; }
+  const rs = S.resellers.find(r=>r.id==rsId);
+  const f  = calcFees(harga);
+  const order = {
+    id: Date.now(),
+    tgl: document.getElementById('pki-tgl').value,
+    rsId: +rsId, rsNama: rs?.nama||'—',
+    pkId: S.session.id, pkNama: S.session.nama,
+    kurirId: null, kurirNama: '—',
+    nama, harga,
+    feeP: f.feeP, komisiR: f.komisiR,
+    ongkir: f.ongkir||0, feeKurir: 0,
+    status: 'proses',
+    catatan: document.getElementById('pki-cat').value
+  };
+  showLoading('Menyimpan order…');
+  try {
+    await dbPush('orders', order);
+    toast('✅ Order disimpan! Menunggu konfirmasi owner.');
+    goPage('pk-orders');
+  } catch(e){ toast('❌ Gagal: '+e.message); }
+  hideLoading();
+}
+
+
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
 </script>
 </body>
-</html>
+        </html>

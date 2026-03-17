@@ -128,8 +128,9 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--ink);mi
   background:rgba(255,255,255,.055);
   border:1.5px solid rgba(232,160,176,.13);
   border-radius:10px;color:white;
-  font-family:'Outfit',sans-serif;font-size:14px;
+  font-family:'Outfit',sans-serif;font-size:16px;
   outline:none;transition:border-color .2s;margin-bottom:14px;
+  -webkit-text-size-adjust:100%;
 }
 .linput::placeholder{color:rgba(255,255,255,.18)}
 .linput:focus{border-color:rgba(232,160,176,.5)}
@@ -140,8 +141,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--ink);mi
   background:rgba(255,255,255,.055);
   border:1.5px solid rgba(232,160,176,.13);
   border-radius:10px;color:white;
-  font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;
+  font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;
   outline:none;transition:border-color .2s;
+  /* fix mobile zoom — iOS zooms when font-size < 16px */
+  -webkit-text-size-adjust:100%;
 }
 .pini:focus{border-color:rgba(232,160,176,.5)}
 
@@ -387,8 +390,9 @@ tr:hover td{background:rgba(250,246,242,.8)}
 .flb{font-size:10.5px;font-weight:600;color:var(--mist);text-transform:uppercase;letter-spacing:.5px}
 .finp,.fsel{
   padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
-  font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink);
+  font-family:'Outfit',sans-serif;font-size:16px;color:var(--ink);
   background:white;outline:none;transition:border-color .18s;
+  -webkit-text-size-adjust:100%;
 }
 .finp:focus,.fsel:focus{border-color:var(--bloom)}
 
@@ -410,10 +414,14 @@ tr:hover td{background:rgba(250,246,242,.8)}
 .txok{color:var(--ok);font-weight:600}
 .txm{color:var(--mist)}
 .txsm{font-size:11px}
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
-.tbtn{padding:9px 16px;cursor:pointer;font-size:12.5px;color:var(--mist);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .18s}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.tbtn{padding:9px 16px;cursor:pointer;font-size:12.5px;color:var(--mist);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .18s;white-space:nowrap}
 .tbtn.active{color:var(--bloom);border-bottom-color:var(--bloom);font-weight:500}
 .tpanel{display:none}.tpanel.active{display:block}
+/* table always scrollable */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* reseller view safe padding */
+.rs-safe{max-width:100%;overflow-x:hidden}
 </style>
 </head>
 <body>
@@ -453,26 +461,16 @@ tr:hover td{background:rgba(250,246,242,.8)}
     <div id="lt-reseller" style="display:none">
       <div class="llabel">Pilih Nama Reseller</div>
       <select class="linput" id="l-rsname" style="cursor:pointer"></select>
-      <div class="llabel">PIN (4 Digit)</div>
-      <div class="pin-row">
-        <input class="pini" type="password" maxlength="1" id="rp1" oninput="pnxt(this,'rp2')" onkeydown="pkey(event,this,null,'rp2')">
-        <input class="pini" type="password" maxlength="1" id="rp2" oninput="pnxt(this,'rp3')" onkeydown="pkey(event,this,'rp1','rp3')">
-        <input class="pini" type="password" maxlength="1" id="rp3" oninput="pnxt(this,'rp4')" onkeydown="pkey(event,this,'rp2','rp4')">
-        <input class="pini" type="password" maxlength="1" id="rp4" oninput="pnxt(this,null)" onkeydown="pkey(event,this,'rp3',null)">
-      </div>
+      <div class="llabel">Password</div>
+      <input class="linput" type="password" id="l-rspin" placeholder="Masukkan password…" onkeydown="if(event.key==='Enter')loginReseller()">
       <button class="lbtn" onclick="loginReseller()">Masuk sebagai Reseller</button>
     </div>
 
     <div id="lt-perangkai" style="display:none">
       <div class="llabel">Pilih Nama Perangkai</div>
       <select class="linput" id="l-pkname" style="cursor:pointer"></select>
-      <div class="llabel">PIN (4 Digit)</div>
-      <div class="pin-row">
-        <input class="pini" type="password" maxlength="1" id="pp1" oninput="pnxt(this,'pp2')" onkeydown="pkey(event,this,null,'pp2')">
-        <input class="pini" type="password" maxlength="1" id="pp2" oninput="pnxt(this,'pp3')" onkeydown="pkey(event,this,'pp1','pp3')">
-        <input class="pini" type="password" maxlength="1" id="pp3" oninput="pnxt(this,'pp4')" onkeydown="pkey(event,this,'pp2','pp4')">
-        <input class="pini" type="password" maxlength="1" id="pp4" oninput="pnxt(this,null)" onkeydown="pkey(event,this,'pp3',null)">
-      </div>
+      <div class="llabel">Password</div>
+      <input class="linput" type="password" id="l-pkpin" placeholder="Masukkan password…" onkeydown="if(event.key==='Enter')loginPerangkai()">
       <button class="lbtn" onclick="loginPerangkai()">Masuk sebagai Perangkai</button>
     </div>
 
@@ -520,27 +518,32 @@ tr:hover td{background:rgba(250,246,242,.8)}
   <div class="mtitle">📋 Tambah Order</div>
   <div class="fg">
     <div class="fi"><label class="flb">Tanggal</label><input class="finp" type="date" id="fo-tgl"></div>
-    <div class="fi"><label class="flb">Reseller</label><select class="fsel" id="fo-rs"></select></div>
+    <div class="fi owner-only"><label class="flb">Reseller</label><select class="fsel" id="fo-rs"></select></div>
     <div class="fi"><label class="flb">Harga Jual (Rp)</label><input class="finp" type="number" id="fo-harga" placeholder="e.g. 75000" oninput="onHargaChange()"></div>
     <div class="fi"><label class="flb">Nama / Deskripsi Buket</label><input class="finp" type="text" id="fo-nama" placeholder="e.g. Buket Wisuda Pink"></div>
-    <div class="fi"><label class="flb">Perangkai</label><select class="fsel" id="fo-pk"></select></div>
-    <div class="fi"><label class="flb">Kurir</label><select class="fsel" id="fo-kurir"></select></div>
-    <div class="fi"><label class="flb">Fee Perangkai (Rp)</label>
+    <div class="fi owner-only"><label class="flb">Perangkai</label><select class="fsel" id="fo-pk"></select></div>
+    <div class="fi owner-only"><label class="flb">Kurir</label><select class="fsel" id="fo-kurir"></select></div>
+    <div class="fi owner-only"><label class="flb">Fee Perangkai (Rp)</label>
       <input class="finp" type="number" id="fo-fp" placeholder="Otomatis dari tabel fee">
       <div class="fee-calc" id="fo-fp-info"></div>
     </div>
-    <div class="fi"><label class="flb">Komisi Reseller (Rp)</label>
+    <div class="fi owner-only"><label class="flb">Komisi Reseller (Rp)</label>
       <input class="finp" type="number" id="fo-kr" placeholder="Otomatis dari tabel fee">
       <div class="fee-calc" id="fo-kr-info"></div>
     </div>
-    <div class="fi"><label class="flb">Ongkir (Rp)</label><input class="finp" type="number" id="fo-ongkir" placeholder="e.g. 15000"></div>
-    <div class="fi"><label class="flb">Fee Kurir (Rp)</label><input class="finp" type="number" id="fo-fk" placeholder="e.g. 10000"></div>
+    <div class="fi owner-only"><label class="flb">Ongkir (Rp)</label><input class="finp" type="number" id="fo-ongkir" placeholder="e.g. 15000"></div>
+    <div class="fi owner-only"><label class="flb">Fee Kurir (Rp)</label><input class="finp" type="number" id="fo-fk" placeholder="e.g. 10000"></div>
     <div class="fi"><label class="flb">Status</label><select class="fsel" id="fo-status">
       <option value="proses">Diproses</option><option value="kirim">Dikirim</option><option value="lunas">Lunas</option>
     </select></div>
     <div class="fi full"><label class="flb">Catatan</label><input class="finp" type="text" id="fo-cat" placeholder="Opsional…"></div>
   </div>
-  <div id="fo-fee-preview" style="margin-top:12px;padding:12px;background:var(--warm);border-radius:9px;font-size:12px;display:none"></div>
+  <!-- owner sees full breakdown, reseller sees simple confirmation -->
+  <div id="fo-fee-preview-owner" style="margin-top:12px;padding:12px;background:var(--warm);border-radius:9px;font-size:12px;display:none"></div>
+  <div id="fo-fee-preview-reseller" style="margin-top:12px;padding:12px;background:var(--blush);border-radius:9px;font-size:13px;display:none;text-align:center">
+    <div style="color:var(--mist);font-size:11px;margin-bottom:4px">Komisi kamu untuk order ini</div>
+    <div id="fo-rs-komisi-display" style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--bloom)">Rp 0</div>
+  </div>
   <div class="mfoot">
     <button class="btn btn-o" onclick="closeOv('mo-order')">Batal</button>
     <button class="btn btn-p" onclick="saveOrder()">Simpan Order</button>
@@ -554,9 +557,9 @@ tr:hover td{background:rgba(250,246,242,.8)}
     <div class="fi"><label class="flb">No. WhatsApp</label><input class="finp" type="text" id="frs-wa" placeholder="08xx"></div>
     <div class="fi"><label class="flb">Kota / Area</label><input class="finp" type="text" id="frs-kota"></div>
     <div class="fi"><label class="flb">Tanggal Bergabung</label><input class="finp" type="date" id="frs-tgl"></div>
-    <div class="fi full"><label class="flb">PIN Login (4 digit angka)</label>
-      <input class="finp" type="text" id="frs-pin" maxlength="4" placeholder="e.g. 1234">
-      <div style="font-size:11px;color:var(--mist);margin-top:3px">Bagikan PIN ini kepada reseller untuk login</div>
+    <div class="fi full"><label class="flb">Password Login</label>
+      <input class="finp" type="text" id="frs-pin" placeholder="Buat password untuk reseller ini">
+      <div style="font-size:11px;color:var(--mist);margin-top:3px">Bagikan password ini kepada reseller untuk login</div>
     </div>
   </div>
   <div class="mfoot"><button class="btn btn-o" onclick="closeOv('mo-rs')">Batal</button><button class="btn btn-p" onclick="saveReseller()">Daftarkan</button></div>
@@ -572,9 +575,9 @@ tr:hover td{background:rgba(250,246,242,.8)}
       <option value="pernikahan">Pernikahan</option><option value="uang_snack">Uang/Snack</option><option value="custom">Custom</option>
     </select></div>
     <div class="fi"><label class="flb">Tanggal Bergabung</label><input class="finp" type="date" id="fpk-tgl"></div>
-    <div class="fi full"><label class="flb">PIN Login (4 digit angka)</label>
-      <input class="finp" type="text" id="fpk-pin" maxlength="4" placeholder="e.g. 5678">
-      <div style="font-size:11px;color:var(--mist);margin-top:3px">Bagikan PIN ini kepada perangkai untuk login</div>
+    <div class="fi full"><label class="flb">Password Login</label>
+      <input class="finp" type="text" id="fpk-pin" placeholder="Buat password untuk perangkai ini">
+      <div style="font-size:11px;color:var(--mist);margin-top:3px">Bagikan password ini kepada perangkai untuk login</div>
     </div>
   </div>
   <div class="mfoot"><button class="btn btn-o" onclick="closeOv('mo-pk')">Batal</button><button class="btn btn-p" onclick="savePerangkai()">Daftarkan</button></div>
@@ -667,29 +670,30 @@ function loginOwner(){
   else document.getElementById('l-err').textContent='❌ Password salah'
 }
 function loginReseller(){
-  const id=document.getElementById('l-rsname').value;
-  const pin=getPin('rp');
-  if(!id){document.getElementById('l-err').textContent='⚠️ Pilih nama kamu';return}
-  if(pin.length<4){document.getElementById('l-err').textContent='⚠️ Masukkan 4 digit PIN';return}
-  const rs=S.resellers.find(r=>r.id==id);
-  if(!rs||rs.pin!==pin){document.getElementById('l-err').textContent='❌ PIN salah';return}
-  S.session={role:'reseller',id:rs.id,nama:rs.nama};startApp()
+  const id = document.getElementById('l-rsname').value;
+  const pin = document.getElementById('l-rspin').value;
+  if(!id){ document.getElementById('l-err').textContent='⚠️ Pilih nama kamu'; return }
+  if(!pin){ document.getElementById('l-err').textContent='⚠️ Masukkan password'; return }
+  const rs = S.resellers.find(r => r.id == id);
+  if(!rs || rs.pin !== pin){ document.getElementById('l-err').textContent='❌ Password salah'; return }
+  S.session = {role:'reseller', id:rs.id, nama:rs.nama}; startApp();
 }
 function loginPerangkai(){
-  const id=document.getElementById('l-pkname').value;
-  const pin=getPin('pp');
-  if(!id){document.getElementById('l-err').textContent='⚠️ Pilih nama kamu';return}
-  if(pin.length<4){document.getElementById('l-err').textContent='⚠️ Masukkan 4 digit PIN';return}
-  const pk=S.perangkai.find(p=>p.id==id);
-  if(!pk||pk.pin!==pin){document.getElementById('l-err').textContent='❌ PIN salah';return}
-  S.session={role:'perangkai',id:pk.id,nama:pk.nama};startApp()
+  const id = document.getElementById('l-pkname').value;
+  const pin = document.getElementById('l-pkpin').value;
+  if(!id){ document.getElementById('l-err').textContent='⚠️ Pilih nama kamu'; return }
+  if(!pin){ document.getElementById('l-err').textContent='⚠️ Masukkan password'; return }
+  const pk = S.perangkai.find(p => p.id == id);
+  if(!pk || pk.pin !== pin){ document.getElementById('l-err').textContent='❌ Password salah'; return }
+  S.session = {role:'perangkai', id:pk.id, nama:pk.nama}; startApp();
 }
 function doLogout(){
   S.session=null;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('l-owpass').value='';
-  clearPins('rp');clearPins('pp');
+  document.getElementById('l-rspin').value='';
+  document.getElementById('l-pkpin').value='';
   document.getElementById('l-err').textContent='';
 }
 
@@ -810,41 +814,63 @@ function closeOv(id){document.getElementById(id).classList.remove('open')}
 document.querySelectorAll('.ov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
 function initOrderModal(){
-  document.getElementById('fo-tgl').value=today();
-  const isRS=S.session?.role==='reseller';
-  const rsSel=document.getElementById('fo-rs');
-  if(isRS){rsSel.innerHTML=`<option value="${S.session.id}">${S.session.nama}</option>`;rsSel.disabled=true}
-  else{rsSel.disabled=false;rsSel.innerHTML='<option value="">— Pilih —</option>';S.resellers.forEach(r=>rsSel.innerHTML+=`<option value="${r.id}">${r.nama}</option>`)}
-  const pkSel=document.getElementById('fo-pk');
-  pkSel.innerHTML='<option value="">— Pilih —</option>';S.perangkai.forEach(p=>pkSel.innerHTML+=`<option value="${p.id}">${p.nama}</option>`);
-  const krSel=document.getElementById('fo-kurir');
-  krSel.innerHTML='<option value="">— Tidak ada —</option>';S.kurir.forEach(k=>krSel.innerHTML+=`<option value="${k.id}">${k.nama} (${k.kendaraan})</option>`);
+  const isRS = S.session?.role === 'reseller';
+  const isOwner = S.session?.role === 'owner';
+
+  // Show/hide owner-only fields
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? 'flex' : 'none';
+  });
+
+  document.getElementById('fo-tgl').value = today();
+  const rsSel = document.getElementById('fo-rs');
+  if(isRS){ rsSel.innerHTML=`<option value="${S.session.id}">${S.session.nama}</option>`; rsSel.disabled=true; }
+  else { rsSel.disabled=false; rsSel.innerHTML='<option value="">— Pilih —</option>'; S.resellers.forEach(r=>rsSel.innerHTML+=`<option value="${r.id}">${r.nama}</option>`); }
+
+  if(isOwner){
+    const pkSel=document.getElementById('fo-pk');
+    pkSel.innerHTML='<option value="">— Pilih —</option>'; S.perangkai.forEach(p=>pkSel.innerHTML+=`<option value="${p.id}">${p.nama}</option>`);
+    const krSel=document.getElementById('fo-kurir');
+    krSel.innerHTML='<option value="">— Tidak ada —</option>'; S.kurir.forEach(k=>krSel.innerHTML+=`<option value="${k.id}">${k.nama} (${k.kendaraan})</option>`);
+    document.getElementById('fo-fp-info').textContent='';
+    document.getElementById('fo-kr-info').textContent='';
+    document.getElementById('fo-fee-preview-owner').style.display='none';
+  }
   ['fo-harga','fo-nama','fo-fp','fo-kr','fo-ongkir','fo-fk','fo-cat'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   document.getElementById('fo-status').selectedIndex=0;
-  document.getElementById('fo-fp-info').textContent='';
-  document.getElementById('fo-kr-info').textContent='';
-  document.getElementById('fo-fee-preview').style.display='none';
+  document.getElementById('fo-fee-preview-reseller').style.display='none';
 }
 
 function onHargaChange(){
-  const harga=parseFloat(document.getElementById('fo-harga').value)||0;
-  if(!harga){document.getElementById('fo-fee-preview').style.display='none';return}
-  const f=calcFees(harga);
-  if(!f.feeP&&!f.komisiR){document.getElementById('fo-fee-preview').style.display='none';return}
-  document.getElementById('fo-fp').value=f.feeP;
-  document.getElementById('fo-kr').value=f.komisiR;
-  document.getElementById('fo-fp-info').textContent=`${f.pctPK}% dari ${rp(harga)} = ${rp(f.feeP)}`;
-  document.getElementById('fo-kr-info').textContent=`${f.pctRS}% dari ${rp(harga)} = ${rp(f.komisiR)}`;
-  const prev=document.getElementById('fo-fee-preview');
-  const note=f.matched?'':`<span style="color:#C06030"> ⚠ Menggunakan harga terdekat ${rp(f.matchedHarga)} di tabel fee</span>`;
-  prev.style.display='block';
-  prev.innerHTML=`<b>Distribusi otomatis:</b>${note}<br>
-    🎨 Perangkai: <b>${rp(f.feeP)}</b> (${f.pctPK}%) &nbsp;·&nbsp;
-    🏪 Reseller: <b>${rp(f.komisiR)}</b> (${f.pctRS}%) &nbsp;·&nbsp;
-    💼 Bisnis: <b>${rp(f.bisnis)}</b> (${f.pctBisnis}%)`;
-  // also set kurir fee from default
-  const kurirId=document.getElementById('fo-kurir').value;
-  if(kurirId){const kr=S.kurir.find(k=>k.id==kurirId);if(kr)document.getElementById('fo-fk').value=kr.feeDefault}
+  const harga = parseFloat(document.getElementById('fo-harga').value)||0;
+  const isOwner = S.session?.role === 'owner';
+
+  if(!harga){
+    if(isOwner) document.getElementById('fo-fee-preview-owner').style.display='none';
+    document.getElementById('fo-fee-preview-reseller').style.display='none';
+    return;
+  }
+  const f = calcFees(harga);
+
+  if(isOwner){
+    document.getElementById('fo-fp').value = f.feeP;
+    document.getElementById('fo-kr').value = f.komisiR;
+    document.getElementById('fo-fp-info').textContent = `${f.pctPK}% dari ${rp(harga)} = ${rp(f.feeP)}`;
+    document.getElementById('fo-kr-info').textContent = `${f.pctRS}% dari ${rp(harga)} = ${rp(f.komisiR)}`;
+    const prev = document.getElementById('fo-fee-preview-owner');
+    const note = f.matched ? '' : `<span style="color:#C06030"> ⚠ Harga terdekat: ${rp(f.matchedHarga)}</span>`;
+    prev.style.display='block';
+    prev.innerHTML=`<b>Distribusi:</b>${note}<br>
+      🎨 Perangkai: <b>${rp(f.feeP)}</b> (${f.pctPK}%) &nbsp;·&nbsp;
+      🏪 Reseller: <b>${rp(f.komisiR)}</b> (${f.pctRS}%) &nbsp;·&nbsp;
+      💼 Bisnis: <b>${rp(f.bisnis)}</b> (${f.pctBisnis}%)`;
+    const kurirId=document.getElementById('fo-kurir').value;
+    if(kurirId){const kr=S.kurir.find(k=>k.id==kurirId);if(kr)document.getElementById('fo-fk').value=kr.feeDefault}
+  } else {
+    // Reseller: only show their own komisi, no breakdown
+    document.getElementById('fo-fee-preview-reseller').style.display='block';
+    document.getElementById('fo-rs-komisi-display').textContent = rp(f.komisiR);
+  }
 }
 
 // ═══════════════════ DB HELPERS ═══════════════════
@@ -922,7 +948,7 @@ async function saveReseller(){
   const nama=document.getElementById('frs-nm').value.trim();
   const pin=document.getElementById('frs-pin').value.trim();
   if(!nama){toast('⚠️ Nama wajib diisi');return}
-  if(!pin||pin.length!==4||!/^\d+$/.test(pin)){toast('⚠️ PIN harus 4 digit angka');return}
+  if(!pin){toast('⚠️ Password wajib diisi');return}
   const data = {id:Date.now(),nama,pin,wa:document.getElementById('frs-wa').value,kota:document.getElementById('frs-kota').value,tgl:document.getElementById('frs-tgl').value,color:COLORS[S.resellers.length%COLORS.length]};
   showLoading('Mendaftarkan reseller…');
   try { await dbPush('resellers', data); closeOv('mo-rs'); toast('✅ Reseller didaftarkan!'); }
@@ -934,7 +960,7 @@ async function savePerangkai(){
   const nama=document.getElementById('fpk-nm').value.trim();
   const pin=document.getElementById('fpk-pin').value.trim();
   if(!nama){toast('⚠️ Nama wajib diisi');return}
-  if(!pin||pin.length!==4||!/^\d+$/.test(pin)){toast('⚠️ PIN harus 4 digit angka');return}
+  if(!pin){toast('⚠️ Password wajib diisi');return}
   const data = {id:Date.now(),nama,pin,wa:document.getElementById('fpk-wa').value,skill:document.getElementById('fpk-skill').value,tgl:document.getElementById('fpk-tgl').value,color:COLORS[S.perangkai.length%COLORS.length]};
   showLoading('Mendaftarkan perangkai…');
   try { await dbPush('perangkai', data); closeOv('mo-pk'); toast('✅ Perangkai didaftarkan!'); }
@@ -1020,10 +1046,10 @@ function renderOrders(){
       <td><button class="btn btn-g btn-sm" onclick="delItem('orders',${o.id},renderOrders)">🗑</button></td>
     </tr>`).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Semua Order</span><span class="badge bm">${S.orders.length} total</span></div>
-    <div class="cb" style="overflow-x:auto"><table><thead><tr>
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr>
       <th>#</th><th>Tgl</th><th>Reseller</th><th>Buket</th><th>Harga</th>
       <th>Fee Perangkai</th><th>Komisi RS</th><th>Ongkir</th><th>Perangkai</th><th>Kurir</th><th>Fee Kurir</th><th>Status</th><th></th>
-    </tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    </tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 function renderReseller(){
@@ -1039,7 +1065,7 @@ function renderReseller(){
           <div class="mstv"><div class="mstv-val">${tot}</div><div class="mstv-lbl">Order</div></div>
           <div class="mstv"><div class="mstv-val">${rp(kom)}</div><div class="mstv-lbl">Komisi</div></div>
         </div>
-        <div class="mpin">PIN Login <span>${r.pin}</span></div>
+        <div class="mpin">Password Login <span>${r.pin}</span></div>
         <div style="margin-top:8px"><div class="pt">Target: ${tot}/${S.bonus.t2}</div>
           <div class="pb"><div class="pf" style="width:${pct}%"></div></div></div>
         <div style="margin-top:8px;display:flex;justify-content:flex-end">
@@ -1059,13 +1085,13 @@ function renderPKList(){
           <div><b>${p.nama}</b><br><span class="txm txsm">${p.wa||'—'}</span></div></div></td>
         <td><span class="badge bb">${p.skill==='semua'?'Semua':p.skill}</span></td>
         <td>${ords.length} order</td><td class="txok">${rp(tf)}</td>
-        <td><div class="mpin" style="display:inline-flex;gap:8px;padding:4px 10px">PIN <span style="letter-spacing:3px;font-size:12px;color:var(--gold)">${p.pin}</span></div></td>
+        <td><div class="mpin" style="display:inline-flex;gap:8px;padding:4px 10px">Pass <span style="letter-spacing:1px;font-size:12px;color:var(--gold)">${p.pin}</span></div></td>
         <td><button class="btn btn-g btn-sm" onclick="delItem('perangkai','${p._key}',renderPKList)">🗑</button></td></tr>`;
     }).join('');
   document.getElementById('pcontent').innerHTML=`<div class="ibox">💡 Bagikan <b>nama + PIN</b> kepada perangkai untuk login ke sistem.</div>
     <div class="card"><div class="ch"><span class="ct">Daftar Perangkai</span></div>
-    <div class="cb"><table><thead><tr><th>#</th><th>Nama</th><th>Keahlian</th><th>Order</th><th>Total Fee</th><th>PIN Login</th><th></th></tr></thead>
-    <tbody>${rows}</tbody></table></div></div>`;
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>#</th><th>Nama</th><th>Keahlian</th><th>Order</th><th>Total Fee</th><th>PIN Login</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 function renderKurir(){
@@ -1231,15 +1257,15 @@ function renderLaporan(){
     <div class="tbtn" onclick="lapTab('pk',this)">Per Perangkai</div>
     <div class="tbtn" onclick="lapTab('kr',this)">Per Kurir</div>
   </div>
-  <div id="lt-rs" class="tpanel active"><div class="card"><div class="cb"><table><thead><tr><th>Reseller</th><th>Order</th><th>Penjualan</th><th>Komisi</th><th>Bonus</th><th>Total</th></tr></thead><tbody>
+  <div id="lt-rs" class="tpanel active"><div class="card"><div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Reseller</th><th>Order</th><th>Penjualan</th><th>Komisi</th><th>Bonus</th><th>Total</th></tr></thead><tbody>
     ${ars.length===0?`<tr><td colspan="6">${empty('🏪','Belum ada data')}</td></tr>`:ars.map(r=>`<tr><td><b>${r.nama}</b></td><td>${r.tot}</td><td class="hl">${rp(r.pjl)}</td><td class="txok">${rp(r.kom)}</td><td>${r.bonus>0?`<span class="badge bg">🎁 ${rp(r.bonus)}</span>`:'—'}</td><td class="hl">${rp(r.kom+r.bonus)}</td></tr>`).join('')}
-  </tbody></table></div></div></div>
-  <div id="lt-pk" class="tpanel"><div class="card"><div class="cb"><table><thead><tr><th>Perangkai</th><th>Order Dikerjakan</th><th>Total Fee Jasa</th></tr></thead><tbody>
+  </tbody></table></div></div></div></div>
+  <div id="lt-pk" class="tpanel"><div class="card"><div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Perangkai</th><th>Order</th><th>Total Fee</th></tr></thead><tbody>
     ${pkRows.length===0?`<tr><td colspan="3">${empty('💐','Belum ada data')}</td></tr>`:pkRows.map(p=>`<tr><td><b>${p.nama}</b></td><td>${p.cnt}</td><td class="txok">${rp(p.tf)}</td></tr>`).join('')}
-  </tbody></table></div></div></div>
-  <div id="lt-kr" class="tpanel"><div class="card"><div class="cb"><table><thead><tr><th>Kurir</th><th>Total Antar</th><th>Total Fee</th><th>Kendaraan</th></tr></thead><tbody>
+  </tbody></table></div></div></div></div>
+  <div id="lt-kr" class="tpanel"><div class="card"><div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Kurir</th><th>Total Antar</th><th>Total Fee</th><th>Kendaraan</th></tr></thead><tbody>
     ${S.kurir.length===0?`<tr><td colspan="4">${empty('🚚','Belum ada kurir')}</td></tr>`:S.kurir.map(k=>{const st=S.orders.filter(o=>o.kurirId==k.id);return`<tr><td><b>${k.nama}</b></td><td>${st.length}</td><td class="txok">${rp(st.reduce((s,o)=>s+o.feeKurir,0))}</td><td><span class="badge bi">${k.kendaraan}</span></td></tr>`;}).join('')}
-  </tbody></table></div></div></div>`;
+  </tbody></table></div></div></div></div>`;
 }
 function lapTab(id,el){document.querySelectorAll('.tbtn').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('lt-'+id).classList.add('active')}
 
@@ -1252,8 +1278,8 @@ function renderRanking(){
       <td class="txok">${rp(r.kom)}</td>
       <td>${r.bonus>0?`<span class="badge bg">🎁 ${rp(r.bonus)}</span>`:'<span class="txm txsm">Belum</span>'}</td></tr>`;}).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">🏆 Ranking Reseller</span></div>
-    <div class="cb"><table><thead><tr><th>Rank</th><th>Reseller</th><th>Order</th><th>Penjualan</th><th>Progress</th><th>Komisi</th><th>Bonus</th></tr></thead>
-    <tbody>${rows}</tbody></table></div></div>`;
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Reseller</th><th>Order</th><th>Penjualan</th><th>Progress</th><th>Komisi</th><th>Bonus</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 // ═══════════════════ RESELLER PAGES ═══════════════════
@@ -1290,10 +1316,10 @@ function renderRsHome(){
       <div class="pt">${st.tot}/${S.bonus.t2}</div>
     </div>
   </div>
-  <div class="g2">
+  <div style="display:grid;grid-template-columns:1fr;gap:14px">
     <div class="card"><div class="ch"><span class="ct">Order Terbaru</span><button class="btn btn-g btn-sm" onclick="goPage('rs-orders')">Semua →</button></div>
-      <div class="cb">${mo.length===0?empty('📋','Belum ada order'):
-      `<table><thead><tr><th>Buket</th><th>Harga</th><th>Komisi Saya</th><th>Status</th></tr></thead><tbody>
+      <div class="cb"><div class="tbl-wrap">${mo.length===0?empty('📋','Belum ada order'):
+      `<table><thead><tr><th>Buket</th><th>Harga</th><th>Komisi</th><th>Status</th></tr></thead><tbody>
         ${mo.slice(0,5).map(o=>`<tr><td>${o.nama}</td><td class="hl">${rp(o.harga)}</td><td class="txok">${rp(o.komisiR)}</td><td>${stBadge(o.status)}</td></tr>`).join('')}
       </tbody></table>`}</div>
     </div>
@@ -1310,10 +1336,10 @@ function renderRsHome(){
 function renderRsOrders(){
   document.getElementById('pactions').innerHTML=`<button class="btn btn-p btn-sm" onclick="openOv('mo-order')">+ Input Order</button>`;
   const mo=myRsOrders();
-  const rows=mo.length===0?`<tr><td colspan="6">${empty('📋','Belum ada order')}</td></tr>`:
+  const rows=mo.length===0?`<tr><td colspan="5">${empty('📋','Belum ada order')}</td></tr>`:
     mo.map((o,i)=>`<tr><td class="txm txsm">${mo.length-i}</td><td class="txsm">${o.tgl}</td><td>${o.nama}</td><td class="hl">${rp(o.harga)}</td><td class="txok">${rp(o.komisiR)}</td><td>${stBadge(o.status)}</td></tr>`).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Order Saya</span><span class="badge bm">${mo.length} order</span></div>
-    <div class="cb"><table><thead><tr><th>#</th><th>Tgl</th><th>Buket</th><th>Harga Jual</th><th>Komisi Saya</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>#</th><th>Tgl</th><th>Buket</th><th>Harga</th><th>Komisi Saya</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 function renderRsKomisi(){
   const st=allRsStats().find(r=>r.id==S.session.id)||{tot:0,kom:0,bonus:0};
@@ -1325,13 +1351,13 @@ function renderRsKomisi(){
     <div class="scard sc2"><div class="sico si2">💵</div><div class="sval">${rp(st.kom+st.bonus)}</div><div class="slbl">Total Diterima</div></div>
   </div>
   <div class="card"><div class="ch"><span class="ct">Detail Komisi per Order</span></div><div class="cb">
-    <table><thead><tr><th>Tgl</th><th>Buket</th><th>Harga Jual</th><th>% Komisi</th><th>Komisi (Rp)</th><th>Status</th></tr></thead><tbody>
+    <div class="tbl-wrap"><table><thead><tr><th>Tgl</th><th>Buket</th><th>Harga</th><th>%</th><th>Komisi</th><th>Status</th></tr></thead><tbody>
     ${mo.length===0?`<tr><td colspan="6">${empty('💰','Belum ada')}</td></tr>`:mo.map(o=>{
       const row=getFeeRow(o.harga);const pct=row?row.pctRS:0;
       return`<tr><td class="txsm">${o.tgl}</td><td>${o.nama}</td><td class="hl">${rp(o.harga)}</td>
         <td><span class="badge bs">${pct}%</span></td><td class="txok">${rp(o.komisiR)}</td><td>${stBadge(o.status)}</td></tr>`;
     }).join('')}
-    </tbody></table>
+    </tbody></table></div>
   </div></div>`;
 }
 function renderRsRanking(){
@@ -1344,7 +1370,7 @@ function renderRsRanking(){
       <td><div class="pb"><div class="pf" style="width:${pct}%"></div></div><div class="pt">${r.tot}/${S.bonus.t2}</div></td>
       <td>${r.bonus>0?`<span class="badge bg">🎁 ${rp(r.bonus)}</span>`:'<span class="txm txsm">Belum</span>'}</td></tr>`;}).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Ranking Reseller</span></div>
-    <div class="cb"><table><thead><tr><th>Rank</th><th>Nama</th><th>Order</th><th>Progress</th><th>Bonus</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Nama</th><th>Order</th><th>Progress</th><th>Bonus</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 // ═══════════════════ PERANGKAI PAGES ═══════════════════
@@ -1398,13 +1424,12 @@ function renderPkOrders(){
       <td><b>${o.nama}</b></td><td class="hl">${rp(o.harga)}</td>
       <td class="txok" style="font-weight:700">${rp(o.feeP)}</td><td>${stBadge(o.status)}</td></tr>`).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Semua Order Saya</span><span class="badge bm">${mo.length} order</span></div>
-    <div class="cb"><table><thead><tr><th>#</th><th>Tgl</th><th>Nama Buket</th><th>Harga Jual</th><th>Jasa Saya</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>#</th><th>Tgl</th><th>Nama Buket</th><th>Harga</th><th>Jasa Saya</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 
 function renderPkJasa(){
   const mo=myPkOrders();
   const totalFee=mo.reduce((s,o)=>s+o.feeP,0);
-  // grup per harga
   const hargaMap={};
   mo.forEach(o=>{
     const row=getFeeRow(o.harga);const pct=row?row.pctPK:0;
@@ -1420,8 +1445,8 @@ function renderPkJasa(){
   </div>
   <div class="card">
     <div class="ch"><span class="ct">Rincian Jasa per Harga Buket</span></div>
-    <div class="cb"><table><thead><tr>
-      <th>Harga Jual</th><th>% Jasa Saya</th><th>Jasa per Buket</th><th>Jumlah Order</th><th>Total Jasa</th>
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr>
+      <th>Harga Jual</th><th>% Jasa</th><th>Jasa/Buket</th><th>Jumlah</th><th>Total Jasa</th>
     </tr></thead><tbody>
     ${Object.keys(hargaMap).length===0?`<tr><td colspan="5">${empty('💰','Belum ada data jasa')}</td></tr>`:
       Object.values(hargaMap).sort((a,b)=>a.harga-b.harga).map(h=>`<tr>
@@ -1431,17 +1456,17 @@ function renderPkJasa(){
         <td>${h.cnt}x</td>
         <td class="txok" style="font-weight:700">${rp(h.totalFee)}</td>
       </tr>`).join('')}
-    </tbody></table></div>
+    </tbody></table></div></div>
   </div>
   <div class="card">
     <div class="ch"><span class="ct">Semua Order — Detail Jasa</span></div>
-    <div class="cb"><table><thead><tr><th>Tgl</th><th>Buket</th><th>Harga Jual</th><th>% Jasa</th><th>Jasa Saya</th><th>Status</th></tr></thead><tbody>
+    <div class="cb"><div class="tbl-wrap"><table><thead><tr><th>Tgl</th><th>Buket</th><th>Harga</th><th>%</th><th>Jasa</th><th>Status</th></tr></thead><tbody>
     ${mo.length===0?`<tr><td colspan="6">${empty('💐','Belum ada')}</td></tr>`:mo.map(o=>{
       const row=getFeeRow(o.harga);const pct=row?row.pctPK:0;
       return`<tr><td class="txsm">${o.tgl}</td><td><b>${o.nama}</b></td><td class="hl">${rp(o.harga)}</td>
         <td><span class="badge bb">${pct}%</span></td><td class="txok" style="font-weight:700">${rp(o.feeP)}</td><td>${stBadge(o.status)}</td></tr>`;
     }).join('')}
-    </tbody></table></div>
+    </tbody></table></div></div>
   </div>`;
 }
 

@@ -160,13 +160,31 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--ink);mi
 /* ─── APP ─── */
 #app{display:none}
 
+/* Sidebar overlay (mobile) */
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;backdrop-filter:blur(2px)}
+#sb-overlay.show{display:block}
+
 .sidebar{
   position:fixed;left:0;top:0;bottom:0;width:224px;
   background:var(--ink);display:flex;flex-direction:column;z-index:100;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
 }
-.sb-top{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-top h1{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--petal);letter-spacing:1px}
-.sb-top p{font-size:9.5px;color:var(--mist);letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}
+.sidebar.collapsed{transform:translateX(-224px)}
+
+.sb-top{
+  padding:16px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sb-top-brand h1{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--petal);letter-spacing:1px;line-height:1}
+.sb-top-brand p{font-size:9px;color:var(--mist);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.sb-close{
+  background:rgba(255,255,255,.06);border:none;border-radius:7px;
+  color:rgba(255,255,255,.4);font-size:16px;cursor:pointer;
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;flex-shrink:0;
+}
+.sb-close:hover{background:rgba(196,82,106,.2);color:var(--petal)}
+
 .sb-role{margin:10px 16px 0;padding:5px 12px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.5px;display:inline-block}
 .role-owner{background:rgba(196,82,106,.2);color:var(--petal)}
 .role-reseller{background:rgba(106,158,112,.2);color:#96D49C}
@@ -191,18 +209,53 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--ink);mi
 .lout-btn{margin-left:auto;padding:4px 9px;background:rgba(255,255,255,.06);border:none;border-radius:6px;color:var(--mist);font-size:10.5px;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif}
 .lout-btn:hover{background:rgba(196,82,106,.2);color:var(--petal)}
 
-.main{margin-left:224px;min-height:100vh}
+/* Main area */
+.main{margin-left:224px;min-height:100vh;transition:margin-left .28s cubic-bezier(.4,0,.2,1)}
+.main.full{margin-left:0}
+
 .topbar{
   background:white;border-bottom:1px solid var(--border);
-  padding:13px 26px;display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:50;
+  padding:11px 18px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;gap:10px;
 }
-.topbar-title{font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--ink);font-weight:600}
-.topbar-right{display:flex;gap:8px;align-items:center}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0}
+.hamburger{
+  background:transparent;border:none;cursor:pointer;
+  font-size:20px;color:var(--mist);padding:4px;
+  flex-shrink:0;line-height:1;
+}
+.hamburger:hover{color:var(--bloom)}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-right{display:flex;gap:6px;align-items:center;flex-shrink:0}
 
-.content{padding:22px 26px}
+.content{padding:16px 18px}
 .page{display:none}
 .page.active{display:block;animation:up .22s ease}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-224px)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0 !important}
+  .sgrid{grid-template-columns:repeat(2,1fr)}
+  .sgrid3{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .content{padding:14px 14px}
+  .topbar{padding:10px 14px}
+  table{font-size:12px}
+  th,td{padding:9px 10px}
+  .btn-sm{padding:6px 10px;font-size:11px}
+  .sval{font-size:20px}
+  .banner{flex-direction:column;gap:14px;align-items:flex-start}
+  .ban-r{flex-wrap:wrap;gap:14px}
+  .hero{flex-direction:column;gap:14px;align-items:flex-start}
+  .hero-r{flex-wrap:wrap}
+  .btiers{flex-direction:column}
+  .modal{padding:18px 16px}
+  .fg{grid-template-columns:1fr}
+  .fi.full{grid-column:1}
+}
 
 /* ─── BUTTONS ─── */
 .btn{padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:500;transition:all .18s;display:inline-flex;align-items:center;gap:5px}
@@ -430,8 +483,17 @@ tr:hover td{background:rgba(250,246,242,.8)}
 
 <!-- ─── APP ─── -->
 <div id="app">
-  <div class="sidebar">
-    <div class="sb-top"><h1>🌸 ENGKA</h1><p>Creative Management</p></div>
+  <!-- Sidebar overlay for mobile -->
+  <div id="sb-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sb-top">
+      <div class="sb-top-brand">
+        <h1>🌸 ENGKA</h1>
+        <p>Creative Management</p>
+      </div>
+      <button class="sb-close" onclick="toggleSidebar()">✕</button>
+    </div>
     <div id="sb-badge"></div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot">
@@ -440,9 +502,13 @@ tr:hover td{background:rgba(250,246,242,.8)}
       <button class="lout-btn" onclick="doLogout()">Keluar</button>
     </div>
   </div>
-  <div class="main">
+
+  <div class="main" id="main-area">
     <div class="topbar">
-      <div class="topbar-title" id="ptitle">Dashboard</div>
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <div class="topbar-title" id="ptitle">Dashboard</div>
+      </div>
       <div class="topbar-right" id="pactions"></div>
     </div>
     <div class="content" id="pcontent"></div>
@@ -554,7 +620,29 @@ let S = {
   bonus: {t1:10, a1:100000, t2:20, a2:250000}
 };
 
-// ═══════════════════ LOGIN ═══════════════════
+// ═══════════════════ SIDEBAR TOGGLE ═══════════════════
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sb-overlay');
+  const isMobile = window.innerWidth <= 768;
+  if(isMobile){
+    sb.classList.toggle('open');
+    ov.classList.toggle('show');
+  } else {
+    sb.classList.toggle('collapsed');
+    document.getElementById('main-area').classList.toggle('full');
+  }
+}
+
+// Close sidebar when nav item clicked on mobile
+function closeSidebarMobile(){
+  if(window.innerWidth <= 768){
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sb-overlay').classList.remove('show');
+  }
+}
+
+
 let lTab = 'owner';
 function setLTab(t) {
   lTab = t;
@@ -664,6 +752,7 @@ function buildNav(r){
 
 function goPage(pg, el){
   if(el){document.querySelectorAll('.sbi').forEach(i=>i.classList.remove('active'));el.classList.add('active')}
+  closeSidebarMobile();
   document.getElementById('ptitle').textContent=PTITLES[pg]||pg;
   document.getElementById('pactions').innerHTML='';
   document.getElementById('pcontent').innerHTML='';
@@ -928,7 +1017,7 @@ function renderOrders(){
       <td>${o.pkNama!=='—'?o.pkNama:'<span class="txm">—</span>'}</td>
       <td>${o.kurirNama!=='—'?o.kurirNama:'<span class="txm">—</span>'}</td><td>${rp(o.feeKurir)}</td>
       <td>${stBadge(o.status)}</td>
-      <td><button class="btn btn-g btn-sm" onclick="delItem('orders','+o._key+',renderOrders)">🗑</button></td>
+      <td><button class="btn btn-g btn-sm" onclick="delItem('orders',${o.id},renderOrders)">🗑</button></td>
     </tr>`).join('');
   document.getElementById('pcontent').innerHTML=`<div class="card"><div class="ch"><span class="ct">Semua Order</span><span class="badge bm">${S.orders.length} total</span></div>
     <div class="cb" style="overflow-x:auto"><table><thead><tr>
@@ -995,7 +1084,7 @@ function renderKurir(){
         <div class="mpin">Fee/antar default <span style="color:var(--sage);letter-spacing:0">${rp(k.feeDefault)}</span></div>
         ${k.area?`<div style="font-size:11px;color:var(--mist);margin-top:7px">📍 ${k.area}</div>`:''}
         <div style="margin-top:8px;display:flex;justify-content:flex-end">
-          <button class="btn btn-g btn-sm" onclick="delItem('kurir','+k._key+',renderKurir)">🗑</button></div>
+          <button class="btn btn-g btn-sm" onclick="delItem('kurir',${k.id},renderKurir)">🗑</button></div>
       </div>`;
     }).join('');
   document.getElementById('pcontent').innerHTML=`

@@ -53,6 +53,7 @@
                                        {id:5,harga:150000,pctPK:15,pctRS:15,pctBisnis:70},
                                        {id:6,harga:200000,pctPK:15,pctRS:12,pctBisnis:73},
                                      ];
+      S.sopData   = data.sopData || null;
       S.pencairan = data.pencairan ? Object.entries(data.pencairan).map(([k,v])=>({...v,_key:k})) : [];
       S.bonus     = data.bonus || {t1:10,a1:100000,t2:20,a2:250000};
       showDbStatus('connected');
@@ -659,7 +660,8 @@ let S = {
     {id:6, harga:200000, pctPK:15, pctRS:12, pctBisnis:73},
   ],
   bonus: {t1:10, a1:100000, t2:20, a2:250000},
-  pencairan: []
+  pencairan: [],
+  sopData: null
 };
 
 // ═══════════════════ SIDEBAR TOGGLE ═══════════════════
@@ -762,8 +764,9 @@ const PTITLES={
   dashboard:'Dashboard',orders:'Data Order',reseller:'Manajemen Reseller',
   perangkai:'Manajemen Perangkai',kurir:'Manajemen Kurir',
   fee:'Tabel Fee & Harga',laporan:'Laporan Penjualan',ranking:'Ranking Reseller',
+  sop:'SOP Pembuatan Buket',
   'rs-home':'Dashboard Saya','rs-orders':'Order Saya','rs-komisi':'Komisi & Bonus','rs-ranking':'Ranking',
-  'pk-home':'Dashboard Saya','pk-orders':'Order Saya','pk-input':'Input Order','pk-jasa':'Rincian Jasa'
+  'pk-home':'Dashboard Saya','pk-orders':'Order Saya','pk-input':'Input Order','pk-jasa':'Rincian Jasa','pk-sop':'SOP Buket'
 };
 
 function buildNav(r){
@@ -779,7 +782,9 @@ function buildNav(r){
     <div class="sb-sec">Keuangan</div>
     <div class="sbi" onclick="goPage('fee',this)"><span class="ico">💰</span>Tabel Fee</div>
     <div class="sbi" onclick="goPage('laporan',this)"><span class="ico">📈</span>Laporan</div>
-    <div class="sbi" onclick="goPage('ranking',this)"><span class="ico">🏆</span>Ranking</div>`;
+    <div class="sbi" onclick="goPage('ranking',this)"><span class="ico">🏆</span>Ranking</div>
+    <div class="sb-sec">Panduan</div>
+    <div class="sbi" onclick="goPage('sop',this)"><span class="ico">📖</span>SOP Buket</div>`;
   else if(r==='reseller') nav.innerHTML=`
     <div class="sb-sec">Saya</div>
     <div class="sbi active" onclick="goPage('rs-home',this)"><span class="ico">📊</span>Dashboard</div>
@@ -791,7 +796,9 @@ function buildNav(r){
     <div class="sbi active" onclick="goPage('pk-home',this)"><span class="ico">📊</span>Dashboard</div>
     <div class="sbi" onclick="goPage('pk-orders',this)"><span class="ico">📋</span>Order Saya</div>
     <div class="sbi" onclick="goPage('pk-input',this)"><span class="ico">➕</span>Input Order</div>
-    <div class="sbi" onclick="goPage('pk-jasa',this)"><span class="ico">💰</span>Rincian Jasa</div>`;
+    <div class="sbi" onclick="goPage('pk-jasa',this)"><span class="ico">💰</span>Rincian Jasa</div>
+    <div class="sb-sec">Panduan</div>
+    <div class="sbi" onclick="goPage('pk-sop',this)"><span class="ico">📖</span>SOP Buket</div>`;
 }
 
 function goPage(pg, el){
@@ -804,8 +811,9 @@ function goPage(pg, el){
     dashboard:renderDashboard, orders:renderOrders, reseller:renderReseller,
     perangkai:renderPKList, kurir:renderKurir, fee:renderFee,
     laporan:renderLaporan, ranking:renderRanking,
+    sop:renderSop,
     'rs-home':renderRsHome,'rs-orders':renderRsOrders,'rs-komisi':renderRsKomisi,'rs-ranking':renderRsRanking,
-    'pk-home':renderPkHome,'pk-orders':renderPkOrders,'pk-input':renderPkInput,'pk-jasa':renderPkJasa
+    'pk-home':renderPkHome,'pk-orders':renderPkOrders,'pk-input':renderPkInput,'pk-jasa':renderPkJasa,'pk-sop':renderPkSop
   })[pg]?.();
 }
 
@@ -1702,7 +1710,175 @@ async function savePkOrder(){
 }
 
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+    status: 'proses',
+    catatan: document.getElementById('pki-cat').value
+  };
+  showLoading('Menyimpan order…');
+  try {
+    await dbPush('orders', order);
+    toast('✅ Order disimpan! Menunggu konfirmasi owner.');
+    goPage('pk-orders');
+  } catch(e){ toast('❌ Gagal: '+e.message); }
+  hideLoading();
+}
+
+// ═══════════════════ SOP DATA ═══════════════════
+const SOP_DEFAULT = {
+  qcUmum: [
+    {id:1,icon:'🧹',judul:'Kebersihan (Hygiene)',isi:'Bebas dari serabut lem tembak (cobweb) dan noda pada kertas wrapping.'},
+    {id:2,icon:'🌸',judul:'Mekarisasi Bunga',isi:'Semua bunga kain/artificial wajib dipijat manual atau hair dryer agar mekar maksimal (tidak kuncup/gepeng).'},
+    {id:3,icon:'🔒',judul:'Keamanan Konstruksi',isi:'Bunga tertancap kokoh di styrofoam (tidak goyang saat diguncang pelan).'},
+    {id:4,icon:'🎨',judul:'Estetika Styrofoam',isi:'Tidak boleh ada bagian putih styrofoam yang terlihat dari depan, samping, maupun celah kertas.'},
+    {id:5,icon:'⚖️',judul:'Simetrisitas',isi:'Sisi kanan dan kiri buket harus seimbang secara visual (kecuali desain asimetris khusus).'},
+    {id:6,icon:'🎀',judul:'Kualitas Pita',isi:'Potongan ujung pita harus rapi (bentuk V atau miring).'},
+    {id:7,icon:'✋',judul:'Handle (Pegangan)',isi:'Nyaman dipegang, lebar sesuai spesifikasi, dan tertutup kertas dengan rapi (tidak ada bagian tajam).'},
+    {id:8,icon:'🏆',judul:'Standar Akhir',isi:'Semua buket harus bisa berdiri sendiri dan pita dapat berfungsi untuk digantung.'},
+  ],
+  harga:[
+    {harga:35000,label:'35K — Ekonomis',emoji:'🌸',bunga:'3 Kecil',teknik:'Segitiga',wrapping:'1 Lembar (Polos 1 Warna)',handle:'8 cm',qcKunci:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',potongan:'Lembar 1: Bagi 2 horizontal → Masing-masing bagi 3 vertikal.\nHasil: 6 Potong Sedang (Rectangle).'},
+    {harga:45000,label:'45K — Diamond',emoji:'💠',bunga:'4 Sedang',teknik:'Diamond',wrapping:'1.5 Lembar (Polos 2 Warna)',handle:'8 cm',qcKunci:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',potongan:'Lembar 1: Bagi 2 horizontal → 6 Potong Sedang.\nLembar 2: Bagi 4 (Square) → Ambil 2 potong saja.\nHasil: 6 Potong Sedang + 2 Potong Besar.'},
+    {harga:50000,label:'50K — Cubit',emoji:'✨',bunga:'5 Kecil',teknik:'5 Titik',wrapping:'1.5–2 Lembar (Polos 2 Jenis)',handle:'9 cm',qcKunci:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',potongan:'Kertas A: Bagi 4 (Square).\nKertas B: Bagi 2 horizontal → 6 Potong Sedang.'},
+    {harga:60000,label:'60K — Gembul',emoji:'🌟',bunga:'5 Sedang (Mix 2 Warna)',teknik:'Lipat Biasa + S + Rok Gembul',wrapping:'2 Lembar (Polos 1 Warna)',handle:'10 cm',qcKunci:'Efek Gembul harus terlihat dari samping.',potongan:'Lembar 1 (Body): Bagi 4 (Square) → Background dan Layer S.\nLembar 2 (Rok & Handle): Bagi 2 horizontal → 6 Potong Sedang.'},
+    {harga:70000,label:'70K — 3 Jenis Kertas',emoji:'💎',bunga:'5 (2 Premium + 3 Sedang)',teknik:'Lipat Biasa + S + Rok Gembul',wrapping:'2.5 Lembar (3 Jenis Polos/List)',handle:'10 cm',qcKunci:'Efek Gembul harus terlihat dari samping. 2 bunga premium wajib di posisi Focal Point.',potongan:'Kertas A (List): Bagi 4 (Square).\nKertas B (Bicolor): Bagi 2 horizontal → 6 Potong Sedang.\nKertas C (Polos): Bagi 2 horizontal → 6 Potong Sedang.'},
+    {harga:80000,label:'80K — Gradien',emoji:'🌈',bunga:'6–7 (Mix) + Full Filler',teknik:'Full Layering + Rok Lebar',wrapping:'3 Lembar (Wajib Gradien)',handle:'11 cm',qcKunci:'Wajib Gradien. Rok bawah Double Layer agar seimbang dengan rangkaian atas.',potongan:'Kertas Utama (Gradien): Bagi 4 (Square) → Layer yang menonjolkan gradasi.\nKertas Pendukung: Bagi 2 horizontal → 6 Potong Sedang untuk filler volume.\nKertas Rok: Bagi 6 (Sedang) untuk efek rok bertumpuk (Double Skirt).'},
+    {harga:90000,label:'90K — Baby Breath',emoji:'🤍',bunga:'7 Sedang + Baby Breath',teknik:'Flat',wrapping:'3.5 Lembar (Full Gradien/List)',handle:'11 cm',qcKunci:'Baby Breath harus "mengintip" di sela bunga. Rok bawah Double Layer.',potongan:'Kertas Utama (Gradien): Bagi 4 (Square).\nKertas Pendukung: Bagi 6 (Sedang) untuk volume.\nKertas Rok: 2 lembar penuh bagi 4 untuk rok lebar.'},
+    {harga:100000,label:'100K — Korean Style',emoji:'👑',bunga:'7–8 (Mix/Lily Series)',teknik:'Korean Style (5+ Layer)',wrapping:'3–4 Lembar (Wajib Motif Kupu)',handle:'13 cm',qcKunci:'Wajib Kertas Motif. Motif kupu/gradasi tidak boleh tertutup. Pita Double Ribbon.',potongan:'Lembar 1 (Motif Kupu): Bagi 4 (Square) → Di layer luar agar motif terlihat.\nLembar 2 (Gradasi): Bagi 2 (Utuh-Besar) → Background tinggi.\nLembar 3 (Volume): Bagi 4 (Square) → Lipat S ganda.\nLembar 4 (Finishing): Bagi 6 (Sedang) → Handle dan Rok Gembul.'},
+    {harga:125000,label:'125K — Mix Jumbo',emoji:'💫',bunga:'10 (Mix Jumbo)',teknik:'Korean Double Layer (Lebar)',wrapping:'4–5 Lembar (Mix Motif)',handle:'14 cm',qcKunci:'Wajib Kertas Motif. Pita Double Ribbon.',potongan:'Layer Belakang: Kertas Utuh atau Bagi 2.\nBody Tengah: Potongan Bagi 4 jumlah banyak untuk efek rimbun.\nRok Bawah: 2 lembar penuh Bagi 4 untuk rok sangat lebar.'},
+    {harga:150000,label:'150K — Extra Volume',emoji:'🏅',bunga:'12–13 Tangkai',teknik:'Extra Voluminous (Tinggi)',wrapping:'5–6 Lembar (Premium)',handle:'15 cm',qcKunci:'Buket harus Self-standing stabil. Wrapping sangat padat dan kaku.',potongan:'Layer Belakang: Kertas Utuh atau Bagi 2.\nBody Tengah: Potongan Bagi 4 jumlah banyak.\nRok Bawah: 2 lembar penuh Bagi 4 untuk rok sangat lebar agar bisa berdiri sendiri.'},
+    {harga:200000,label:'200K — Masterpiece',emoji:'👸',bunga:'15–18 Tangkai',teknik:'Masterpiece Grand (Jumbo)',wrapping:'7–8 Lembar (Premium)',handle:'17–18 cm',qcKunci:'Buket harus Self-standing stabil. Wrapping sangat padat dan kaku.',potongan:'Layer Belakang: Kertas Utuh.\nBody Tengah: Potongan Bagi 4 sangat banyak.\nRok Bawah: 2–3 lembar penuh Bagi 4 untuk rok jumbo agar bisa berdiri sendiri.'},
+  ]
+};
+
+function renderSop(){
+  document.getElementById('pactions').innerHTML=`<button class="btn btn-p btn-sm" onclick="saveSopChanges()">💾 Simpan Perubahan</button>`;
+  const sopData = S.sopData || SOP_DEFAULT;
+  document.getElementById('pcontent').innerHTML=`
+  <div class="ibox">📖 SOP ini dapat diedit oleh owner. Perangkai hanya bisa membaca sesuai harga buket yang dikerjakan.</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">🔍 QC Umum — Berlaku untuk Semua Buket</span></div>
+    <div class="cp" id="qc-list">
+      ${sopData.qcUmum.map(q=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:20px;flex-shrink:0">${q.icon}</div>
+        <div style="flex:1">
+          <input class="finp" style="font-weight:600;margin-bottom:5px" value="${q.judul}" id="qc-judul-${q.id}">
+          <textarea class="finp" style="resize:vertical;min-height:46px;width:100%" id="qc-isi-${q.id}">${q.isi}</textarea>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">💰 SOP per Harga Buket</span></div>
+    <div class="cp">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+        ${sopData.harga.map(h=>`<button class="btn btn-o btn-sm" onclick="document.getElementById('sop-${h.harga}').scrollIntoView({behavior:'smooth'})">${h.emoji} ${h.harga/1000}K</button>`).join('')}
+      </div>
+      ${sopData.harga.map(h=>`
+      <div id="sop-${h.harga}" style="margin-bottom:18px;padding:16px;background:var(--warm);border-radius:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="font-size:26px">${h.emoji}</span>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700">${h.label}</div>
+        </div>
+        <div class="fg">
+          <div class="fi"><label class="flb">Jumlah Bunga</label><input class="finp" value="${h.bunga}" id="sop-bunga-${h.harga}"></div>
+          <div class="fi"><label class="flb">Teknik Wrapping</label><input class="finp" value="${h.teknik}" id="sop-teknik-${h.harga}"></div>
+          <div class="fi"><label class="flb">Kertas Wrapping</label><input class="finp" value="${h.wrapping}" id="sop-wrapping-${h.harga}"></div>
+          <div class="fi"><label class="flb">Lebar Handle</label><input class="finp" value="${h.handle}" id="sop-handle-${h.harga}"></div>
+          <div class="fi full"><label class="flb">🚨 QC Kunci</label>
+            <input class="finp" style="border-color:rgba(196,82,106,.4);background:rgba(196,82,106,.04)" value="${h.qcKunci}" id="sop-qcKunci-${h.harga}">
+          </div>
+          <div class="fi full"><label class="flb">✂️ Panduan Pemotongan Kertas</label>
+            <textarea class="finp" style="resize:vertical;min-height:80px;width:100%" id="sop-potongan-${h.harga}">${h.potongan}</textarea>
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function saveSopChanges(){
+  const sopData = S.sopData ? JSON.parse(JSON.stringify(S.sopData)) : JSON.parse(JSON.stringify(SOP_DEFAULT));
+  sopData.qcUmum.forEach(q=>{
+    const j=document.getElementById('qc-judul-'+q.id);
+    const i=document.getElementById('qc-isi-'+q.id);
+    if(j) q.judul=j.value;
+    if(i) q.isi=i.value;
+  });
+  sopData.harga.forEach(h=>{
+    ['bunga','teknik','wrapping','handle','qcKunci','potongan'].forEach(f=>{
+      const el=document.getElementById(`sop-${f}-${h.harga}`);
+      if(el) h[f]=el.value;
+    });
+  });
+  showLoading('Menyimpan SOP…');
+  try {
+    await dbSet('sopData', sopData);
+    S.sopData = sopData;
+    toast('✅ SOP berhasil disimpan!');
+  } catch(e){ toast('❌ Gagal: '+e.message); }
+  hideLoading();
+}
+
+function renderPkSop(){
+  const sopData = S.sopData || SOP_DEFAULT;
+  const myOrders = S.orders.filter(o=>o.pkId==S.session.id && o.status==='proses');
+  const activeHargas = [...new Set(myOrders.map(o=>o.harga))];
+  const getSopForHarga = h => sopData.harga.reduce((prev,cur)=>Math.abs(cur.harga-h)<Math.abs(prev.harga-h)?cur:prev);
+  const relevantSop = activeHargas.length>0
+    ? activeHargas.map(h=>({...getSopForHarga(h), orderHarga:h}))
+    : sopData.harga;
+
+  document.getElementById('pcontent').innerHTML=`
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">🔍 QC Umum — Wajib Dicek Semua Buket</span></div>
+    <div class="cp">
+      ${sopData.qcUmum.map(q=>`
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:18px;flex-shrink:0">${q.icon}</div>
+        <div><div style="font-weight:600;font-size:13px;margin-bottom:2px">${q.judul}</div>
+        <div style="font-size:12px;color:var(--mist);line-height:1.5">${q.isi}</div></div>
+      </div>`).join('')}
+    </div>
+  </div>
+  ${activeHargas.length>0?`<div class="ibox">📋 SOP untuk order aktif kamu: ${activeHargas.map(h=>rp(h)).join(', ')}</div>`:''}
+  ${relevantSop.map(h=>`
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch">
+      <span class="ct">${h.emoji} ${h.label}</span>
+      ${h.orderHarga?`<span class="badge bb">Order aktif</span>`:''}
+    </div>
+    <div class="cp">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:var(--warm);border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Jumlah Bunga</div>
+          <div style="font-weight:600;font-size:13px">${h.bunga}</div>
+        </div>
+        <div style="background:var(--warm);border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Teknik</div>
+          <div style="font-weight:600;font-size:13px">${h.teknik}</div>
+        </div>
+        <div style="background:var(--warm);border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Kertas Wrapping</div>
+          <div style="font-weight:600;font-size:13px">${h.wrapping}</div>
+        </div>
+        <div style="background:var(--warm);border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Lebar Handle</div>
+          <div style="font-weight:600;font-size:13px">${h.handle}</div>
+        </div>
+      </div>
+      <div style="background:rgba(196,82,106,.06);border:1px solid rgba(196,82,106,.2);border-radius:8px;padding:11px;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--bloom);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🚨 QC Kunci</div>
+        <div style="font-size:13px;line-height:1.6">${h.qcKunci}</div>
+      </div>
+      <div style="background:var(--warm);border-radius:8px;padding:11px">
+        <div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">✂️ Panduan Pemotongan Kertas</div>
+        <div style="font-size:12px;line-height:1.8;white-space:pre-line">${h.potongan}</div>
+      </div>
+    </div>
+  </div>`).join('')}`;
+}
+
+// ═══════════════════ TOAST ═══════════════════
 </script>
 </body>
-        </html>
+</html>

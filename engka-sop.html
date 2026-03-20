@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENGKA — SOP Buket</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtI6SmJGttStLC4HmBevujMqNOrd_Bl3I",
+    authDomain: "engka-creative-manajemen.firebaseapp.com",
+    databaseURL: "https://engka-creative-manajemen-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "engka-creative-manajemen",
+    storageBucket: "engka-creative-manajemen.firebasestorage.app",
+    messagingSenderId: "483858976556",
+    appId: "1:483858976556:web:c1c50a48d1cb0babe4a689"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  window._db = db;
+  window._ref = ref;
+  window._set = set;
+  window.addEventListener('DOMContentLoaded', () => {
+    onValue(ref(db, 'sopData'), (snap) => {
+      const data = snap.val();
+      if (data) {
+        window.sopLoaded = data;
+      } else {
+        window.sopLoaded = null;
+      }
+      if (window.appReady) renderAll();
+    });
+  });
+</script>
+<style>
+:root {
+  --ink: #181014;
+  --petal: #E8A0B0;
+  --bloom: #C4526A;
+  --blush: #F5E6EA;
+  --cream: #FAF6F2;
+  --warm: #F0E8E0;
+  --sage: #6A9E70;
+  --gold: #C4903A;
+  --mist: #8A7A82;
+  --border: #E8DDD8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Outfit',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+
+/* LOGIN */
+#login-screen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(160deg,#110C10 0%,#2E1520 55%,#110C10 100%);
+  position:relative; overflow:hidden;
+}
+#login-screen::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse 60% 50% at 30% 60%,rgba(232,160,176,.13) 0%,transparent 70%);
+}
+.lbox {
+  background:rgba(255,255,255,.04); border:1px solid rgba(232,160,176,.18);
+  backdrop-filter:blur(24px); border-radius:24px; padding:44px 40px;
+  width:380px; max-width:95vw; position:relative; z-index:1;
+  animation:up .5s ease;
+}
+@keyframes up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.llogo { text-align:center; margin-bottom:28px; }
+.llogo h1 { font-family:'Cormorant Garamond',serif; font-size:36px; color:var(--petal); letter-spacing:3px; }
+.llogo p { font-size:11px; color:rgba(232,160,176,.45); letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
+.llabel { font-size:10px; text-transform:uppercase; letter-spacing:1.8px; color:rgba(232,160,176,.55); margin-bottom:7px; font-weight:600; }
+.linput {
+  width:100%; padding:12px 15px; background:rgba(255,255,255,.055);
+  border:1.5px solid rgba(232,160,176,.13); border-radius:10px; color:white;
+  font-family:'Outfit',sans-serif; font-size:16px; outline:none;
+  transition:border-color .2s; margin-bottom:14px;
+}
+.linput:focus { border-color:rgba(232,160,176,.5); }
+.ltabs { display:flex; gap:0; margin-bottom:22px; background:rgba(255,255,255,.05); border-radius:10px; padding:4px; }
+.ltab { flex:1; text-align:center; padding:9px 6px; border-radius:8px; cursor:pointer; font-size:12px; color:rgba(255,255,255,.35); transition:all .2s; font-weight:500; }
+.ltab.active { background:var(--bloom); color:white; }
+.lbtn {
+  width:100%; padding:13px; background:linear-gradient(135deg,var(--bloom),#962040);
+  border:none; border-radius:10px; color:white; font-family:'Outfit',sans-serif;
+  font-size:14px; font-weight:600; cursor:pointer; transition:all .2s;
+}
+.lbtn:hover { transform:translateY(-1px); box-shadow:0 8px 28px rgba(196,82,106,.38); }
+.lerr { color:#E88899; font-size:12px; text-align:center; margin-top:10px; min-height:18px; }
+
+/* MAIN APP */
+#app { display:none; }
+.header {
+  background:var(--ink); padding:14px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:50;
+}
+.header-brand { font-family:'Cormorant Garamond',serif; font-size:20px; color:var(--petal); }
+.header-role { font-size:11px; color:var(--mist); background:rgba(255,255,255,.06); padding:4px 10px; border-radius:20px; }
+.header-right { display:flex; align-items:center; gap:10px; }
+.btn-logout { background:rgba(255,255,255,.06); border:none; border-radius:6px; color:var(--mist); font-size:11px; cursor:pointer; padding:5px 10px; font-family:'Outfit',sans-serif; }
+.btn-logout:hover { background:rgba(196,82,106,.2); color:var(--petal); }
+
+/* ROLE TABS */
+.role-tabs { background:white; border-bottom:1px solid var(--border); padding:0 18px; display:flex; gap:0; overflow-x:auto; }
+.role-tab { padding:12px 16px; cursor:pointer; font-size:13px; color:var(--mist); border-bottom:2px solid transparent; white-space:nowrap; transition:all .18s; }
+.role-tab.active { color:var(--bloom); border-bottom-color:var(--bloom); font-weight:600; }
+
+.content { padding:18px; max-width:860px; margin:0 auto; }
+
+/* OWNER EDITOR */
+.edit-section { background:white; border-radius:13px; border:1px solid var(--border); margin-bottom:16px; overflow:hidden; }
+.edit-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.edit-title { font-family:'Cormorant Garamond',serif; font-size:16px; }
+.edit-body { padding:18px; }
+.fi { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+.fi:last-child { margin-bottom:0; }
+.flb { font-size:10px; font-weight:600; color:var(--mist); text-transform:uppercase; letter-spacing:.5px; }
+.finp, .ftxt {
+  padding:9px 12px; border:1.5px solid var(--border); border-radius:8px;
+  font-family:'Outfit',sans-serif; font-size:15px; color:var(--ink);
+  background:white; outline:none; transition:border-color .18s;
+  -webkit-text-size-adjust:100%;
+}
+.finp:focus, .ftxt:focus { border-color:var(--bloom); }
+.ftxt { resize:vertical; min-height:70px; line-height:1.6; }
+.fg2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.harga-block { background:var(--warm); border-radius:12px; padding:16px; margin-bottom:14px; }
+.harga-title { font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.nav-pills { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.pill { padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer; border:1.5px solid var(--border); background:white; transition:all .15s; }
+.pill:hover, .pill.active { background:var(--bloom); color:white; border-color:var(--bloom); }
+
+/* READER VIEW */
+.qc-item { display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.qc-item:last-child { border-bottom:none; }
+.qc-icon { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
+.qc-title { font-weight:600; font-size:13px; margin-bottom:2px; }
+.qc-desc { font-size:12px; color:var(--mist); line-height:1.5; }
+.spec-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.spec-box { background:var(--warm); border-radius:8px; padding:10px; }
+.spec-lbl { font-size:10px; color:var(--mist); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.spec-val { font-weight:600; font-size:13px; }
+.qc-alert { background:rgba(196,82,106,.06); border:1px solid rgba(196,82,106,.2); border-radius:8px; padding:11px; margin-bottom:8px; }
+.qc-alert-lbl { font-size:10px; font-weight:700; color:var(--bloom); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.cut-box { background:var(--warm); border-radius:8px; padding:11px; }
+.cut-lbl { font-size:10px; font-weight:700; color:var(--mist); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.cut-text { font-size:12px; line-height:1.8; white-space:pre-line; }
+
+/* BUTTONS */
+.btn { padding:7px 16px; border-radius:8px; border:none; cursor:pointer; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; transition:all .18s; }
+.btn-p { background:var(--bloom); color:white; }
+.btn-p:hover { background:#A0304A; }
+.btn-o { background:transparent; border:1.5px solid var(--border); color:var(--ink); }
+.btn-gold { background:var(--gold); color:white; }
+.btn-sm { padding:5px 11px; font-size:11.5px; }
+
+.toast { position:fixed; bottom:20px; right:20px; background:var(--ink); color:white; padding:10px 17px; border-radius:9px; font-size:12.5px; z-index:1000; transform:translateY(55px); opacity:0; transition:all .28s; pointer-events:none; }
+.toast.show { transform:translateY(0); opacity:1; }
+.ibox { background:rgba(196,144,58,.07); border:1px solid rgba(196,144,58,.22); border-radius:9px; padding:11px 14px; font-size:12px; color:#7A5010; margin-bottom:14px; }
+.badge { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:10.5px; font-weight:600; }
+.bb { background:rgba(196,82,106,.1); color:var(--bloom); }
+
+#loading { position:fixed; inset:0; background:rgba(18,10,16,.7); display:flex; align-items:center; justify-content:center; z-index:999; }
+#loading p { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--petal); }
+
+@media(max-width:600px) {
+  .spec-grid { grid-template-columns:1fr 1fr; }
+  .fg2 { grid-template-columns:1fr; }
+  .lbox { padding:32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><p>🌸 Memuat SOP...</p></div>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:none">
+  <div class="lbox">
+    <div class="llogo"><h1>🌸 ENGKA</h1><p>SOP Pembuatan Buket</p></div>
+    <div class="ltabs">
+      <div class="ltab active" onclick="setTab('owner')">&#x1F451; Owner</div>
+      <div class="ltab" onclick="setTab('perangkai')">&#x1F490; Perangkai</div>
+    </div>
+    <div id="lt-owner">
+      <div class="llabel">Password Owner</div>
+      <input class="linput" type="password" id="l-owpass" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter')loginOwner()">
+      <button class="lbtn" onclick="loginOwner()">Masuk sebagai Owner</button>
+    </div>
+    <div id="lt-perangkai" style="display:none">
+      <div class="llabel">Pilih Nama Perangkai</div>
+      <select class="linput" id="l-pkname" style="cursor:pointer"></select>
+      <div class="llabel">Password</div>
+      <input class="linput" type="password" id="l-pkpin" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter')loginPK()">
+      <button class="lbtn" onclick="loginPK()">Masuk sebagai Perangkai</button>
+    </div>
+    <div class="lerr" id="l-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-brand">🌸 ENGKA — SOP Buket</div>
+    <div class="header-right">
+      <span class="header-role" id="h-role"></span>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <!-- OWNER TABS -->
+  <div id="owner-tabs" style="display:none">
+    <div class="role-tabs">
+      <div class="role-tab active" onclick="switchView('read',this)">&#x1F4D6; Baca SOP</div>
+      <div class="role-tab" onclick="switchView('edit',this)">&#x270F; Edit SOP</div>
+    </div>
+  </div>
+
+  <div class="content" id="main-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ DATA DEFAULT ============
+var OWPASS = 'Engkasi';
+var session = null;
+var currentView = 'read';
+
+var SOP_QC = [
+  {id:1, icon:'🧹', judul:'Kebersihan (Hygiene)', isi:'Bebas dari serabut lem tembak dan noda pada kertas wrapping.'},
+  {id:2, icon:'🌸', judul:'Mekarisasi Bunga', isi:'Semua bunga kain/artificial wajib dipijat manual atau hair dryer agar mekar maksimal (tidak kuncup/gepeng).'},
+  {id:3, icon:'🔒', judul:'Keamanan Konstruksi', isi:'Bunga tertancap kokoh di styrofoam (tidak goyang saat diguncang pelan).'},
+  {id:4, icon:'🎨', judul:'Estetika Styrofoam', isi:'Tidak boleh ada bagian putih styrofoam yang terlihat dari depan, samping, maupun celah kertas.'},
+  {id:5, icon:'⚖️', judul:'Simetrisitas', isi:'Sisi kanan dan kiri buket harus seimbang secara visual (kecuali desain asimetris khusus).'},
+  {id:6, icon:'🎀', judul:'Kualitas Pita', isi:'Potongan ujung pita harus rapi (bentuk V atau miring).'},
+  {id:7, icon:'✋', judul:'Handle (Pegangan)', isi:'Nyaman dipegang, lebar sesuai spesifikasi, tertutup kertas dengan rapi (tidak ada bagian tajam).'},
+  {id:8, icon:'🏆', judul:'Standar Akhir', isi:'Semua buket harus bisa berdiri sendiri dan pita dapat berfungsi untuk digantung.'}
+];
+
+var SOP_HARGA = [
+  {harga:35000, label:'35K - Ekonomis', emoji:'🌸', bunga:'3 Kecil', teknik:'Segitiga', wrapping:'1 Lembar (Polos 1 Warna)', handle:'8 cm',
+   qc:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',
+   potong:'Lembar 1: Bagi 2 horizontal, masing-masing bagi 3 vertikal.\nHasil: 6 Potong Sedang (Rectangle).'},
+  {harga:45000, label:'45K - Diamond', emoji:'💠', bunga:'4 Sedang', teknik:'Diamond', wrapping:'1.5 Lembar (Polos 2 Warna)', handle:'8 cm',
+   qc:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',
+   potong:'Lembar 1: Bagi 2 horizontal, 6 Potong Sedang.\nLembar 2: Bagi 4 (Square), ambil 2 potong saja.\nHasil: 6 Potong Sedang + 2 Potong Besar.'},
+  {harga:50000, label:'50K - Cubit', emoji:'✨', bunga:'5 Kecil', teknik:'5 Titik', wrapping:'1.5-2 Lembar (Polos 2 Jenis)', handle:'9 cm',
+   qc:'Mekarkan bunga manual. Handle ramping tapi kuat. Dilarang pakai Filler.',
+   potong:'Kertas A: Bagi 4 (Square).\nKertas B: Bagi 2 horizontal, 6 Potong Sedang.'},
+  {harga:60000, label:'60K - Gembul', emoji:'🌟', bunga:'5 Sedang (Mix 2 Warna)', teknik:'Lipat Biasa + S + Rok Gembul', wrapping:'2 Lembar (Polos 1 Warna)', handle:'10 cm',
+   qc:'Efek Gembul harus terlihat dari samping.',
+   potong:'Lembar 1 (Body): Bagi 4 (Square), untuk Background dan Layer S.\nLembar 2 (Rok & Handle): Bagi 2 horizontal, 6 Potong Sedang.'},
+  {harga:70000, label:'70K - 3 Jenis Kertas', emoji:'💎', bunga:'5 (2 Premium + 3 Sedang)', teknik:'Lipat Biasa + S + Rok Gembul', wrapping:'2.5 Lembar (3 Jenis Polos/List)', handle:'10 cm',
+   qc:'Efek Gembul harus terlihat dari samping. 2 bunga premium wajib di posisi Focal Point.',
+   potong:'Kertas A (List): Bagi 4 (Square).\nKertas B (Bicolor): Bagi 2 horizontal, 6 Potong Sedang.\nKertas C (Polos): Bagi 2 horizontal, 6 Potong Sedang.'},
+  {harga:80000, label:'80K - Gradien', emoji:'🌈', bunga:'6-7 (Mix) + Full Filler', teknik:'Full Layering + Rok Lebar', wrapping:'3 Lembar (Wajib Gradien)', handle:'11 cm',
+   qc:'Wajib Gradien. Rok bawah Double Layer agar seimbang.',
+   potong:'Kertas Utama (Gradien): Bagi 4 (Square), layer yang menonjolkan gradasi.\nKertas Pendukung: Bagi 2 horizontal, 6 Potong Sedang untuk filler.\nKertas Rok: Bagi 6 (Sedang) untuk efek rok bertumpuk (Double Skirt).'},
+  {harga:90000, label:'90K - Baby Breath', emoji:'🤍', bunga:'7 Sedang + Baby Breath', teknik:'Flat', wrapping:'3.5 Lembar (Full Gradien/List)', handle:'11 cm',
+   qc:'Baby Breath harus mengintip di sela bunga. Rok bawah Double Layer.',
+   potong:'Kertas Utama (Gradien): Bagi 4 (Square).\nKertas Pendukung: Bagi 6 (Sedang) untuk volume.\nKertas Rok: 2 lembar penuh bagi 4 untuk rok lebar.'},
+  {harga:100000, label:'100K - Korean Style', emoji:'👑', bunga:'7-8 (Mix/Lily Series)', teknik:'Korean Style (5+ Layer)', wrapping:'3-4 Lembar (Wajib Motif Kupu)', handle:'13 cm',
+   qc:'Wajib Kertas Motif. Motif kupu tidak boleh tertutup. Pita Double Ribbon.',
+   potong:'Lembar 1 (Motif Kupu): Bagi 4 (Square), di layer luar agar motif terlihat.\nLembar 2 (Gradasi): Bagi 2 (Utuh-Besar), background tinggi.\nLembar 3 (Volume): Bagi 4 (Square), Lipat S ganda.\nLembar 4 (Finishing): Bagi 6 (Sedang), Handle dan Rok Gembul.'},
+  {harga:125000, label:'125K - Mix Jumbo', emoji:'💫', bunga:'10 (Mix Jumbo)', teknik:'Korean Double Layer (Lebar)', wrapping:'4-5 Lembar (Mix Motif)', handle:'14 cm',
+   qc:'Wajib Kertas Motif. Pita Double Ribbon.',
+   potong:'Layer Belakang: Kertas Utuh atau Bagi 2.\nBody Tengah: Potongan Bagi 4 jumlah banyak untuk efek rimbun.\nRok Bawah: 2 lembar penuh Bagi 4 untuk rok sangat lebar.'},
+  {harga:150000, label:'150K - Extra Volume', emoji:'🏅', bunga:'12-13 Tangkai', teknik:'Extra Voluminous (Tinggi)', wrapping:'5-6 Lembar (Premium)', handle:'15 cm',
+   qc:'Buket harus Self-standing stabil. Wrapping sangat padat dan kaku.',
+   potong:'Layer Belakang: Kertas Utuh atau Bagi 2.\nBody Tengah: Potongan Bagi 4 jumlah banyak.\nRok Bawah: 2 lembar penuh Bagi 4, rok sangat lebar agar berdiri sendiri.'},
+  {harga:200000, label:'200K - Masterpiece', emoji:'👸', bunga:'15-18 Tangkai', teknik:'Masterpiece Grand (Jumbo)', wrapping:'7-8 Lembar (Premium)', handle:'17-18 cm',
+   qc:'Buket harus Self-standing stabil. Wrapping sangat padat dan kaku.',
+   potong:'Layer Belakang: Kertas Utuh.\nBody Tengah: Potongan Bagi 4 sangat banyak.\nRok Bawah: 2-3 lembar penuh Bagi 4, rok jumbo agar berdiri sendiri.'}
+];
+
+// Perangkai list (loaded from Firebase)
+var pkList = [];
+
+// ============ INIT ============
+function getSop() {
+  return window.sopLoaded || {qcUmum: SOP_QC, harga: SOP_HARGA};
+}
+
+window.appReady = false;
+window.addEventListener('DOMContentLoaded', function() {
+  // Wait a bit for Firebase to load, then show login
+  setTimeout(function() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    window.appReady = true;
+    // Load perangkai list for login select
+    if (window._db) {
+      window._onValue(window._ref(window._db, 'perangkai'), function(snap) {
+        var d = snap.val() || {};
+        pkList = Object.values(d);
+        var sel = document.getElementById('l-pkname');
+        sel.innerHTML = '<option value="">-- Pilih nama --</option>';
+        pkList.forEach(function(p) {
+          sel.innerHTML += '<option value="' + p.id + '">' + p.nama + '</option>';
+        });
+      });
+    }
+  }, 1500);
+});
+
+// ============ LOGIN ============
+var loginTab = 'owner';
+function setTab(t) {
+  loginTab = t;
+  document.querySelectorAll('.ltab').forEach(function(el, i) {
+    el.classList.toggle('active', ['owner','perangkai'][i] === t);
+  });
+  document.getElementById('lt-owner').style.display = t === 'owner' ? 'block' : 'none';
+  document.getElementById('lt-perangkai').style.display = t === 'perangkai' ? 'block' : 'none';
+  document.getElementById('l-err').textContent = '';
+}
+function loginOwner() {
+  var pass = document.getElementById('l-owpass').value;
+  if (pass === OWPASS) {
+    session = {role:'owner', nama:'Owner'};
+    startApp();
+  } else {
+    document.getElementById('l-err').textContent = 'Password salah';
+  }
+}
+function loginPK() {
+  var id = document.getElementById('l-pkname').value;
+  var pin = document.getElementById('l-pkpin').value;
+  if (!id) { document.getElementById('l-err').textContent = 'Pilih nama kamu'; return; }
+  if (!pin) { document.getElementById('l-err').textContent = 'Masukkan password'; return; }
+  var pk = pkList.find(function(p) { return p.id == id; });
+  if (!pk || pk.pin !== pin) { document.getElementById('l-err').textContent = 'Password salah'; return; }
+  session = {role:'perangkai', id:pk.id, nama:pk.nama};
+  startApp();
+}
+function doLogout() {
+  session = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-owpass').value = '';
+  document.getElementById('l-pkpin').value = '';
+  document.getElementById('l-err').textContent = '';
+}
+
+// ============ APP ============
+function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('h-role').textContent = session.role === 'owner' ? 'Owner' : session.nama;
+  document.getElementById('owner-tabs').style.display = session.role === 'owner' ? 'block' : 'none';
+  currentView = 'read';
+  renderAll();
+}
+function switchView(v, el) {
+  currentView = v;
+  document.querySelectorAll('.role-tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+  renderAll();
+}
+
+function renderAll() {
+  if (currentView === 'edit' && session && session.role === 'owner') {
+    renderEdit();
+  } else {
+    renderRead();
+  }
+}
+
+// ============ READ VIEW ============
+function renderRead() {
+  var sop = getSop();
+  var qcHtml = sop.qcUmum.map(function(q) {
+    return '<div class="qc-item">' +
+      '<div class="qc-icon">' + q.icon + '</div>' +
+      '<div><div class="qc-title">' + q.judul + '</div><div class="qc-desc">' + q.isi + '</div></div>' +
+      '</div>';
+  }).join('');
+
+  var navHtml = sop.harga.map(function(h) {
+    return '<span class="pill" onclick="jumpTo(' + h.harga + ')">' + h.emoji + ' ' + (h.harga/1000) + 'K</span>';
+  }).join('');
+
+  var hargaHtml = sop.harga.map(function(h) {
+    return '<div id="h-' + h.harga + '" style="margin-bottom:16px">' +
+      '<div class="edit-section">' +
+      '<div class="edit-header">' +
+      '<span style="font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:700">' + h.emoji + ' ' + h.label + '</span>' +
+      '<span class="badge bb">Handle ' + h.handle + '</span>' +
+      '</div>' +
+      '<div class="edit-body">' +
+      '<div class="spec-grid">' +
+      '<div class="spec-box"><div class="spec-lbl">Jumlah Bunga</div><div class="spec-val">' + h.bunga + '</div></div>' +
+      '<div class="spec-box"><div class="spec-lbl">Teknik</div><div class="spec-val">' + h.teknik + '</div></div>' +
+      '<div class="spec-box"><div class="spec-lbl">Kertas Wrapping</div><div class="spec-val">' + h.wrapping + '</div></div>' +
+      '<div class="spec-box"><div class="spec-lbl">Lebar Handle</div><div class="spec-val">' + h.handle + '</div></div>' +
+      '</div>' +
+      '<div class="qc-alert"><div class="qc-alert-lbl">&#x1F6A8; QC Kunci</div><div style="font-size:13px;line-height:1.6">' + h.qc + '</div></div>' +
+      '<div class="cut-box"><div class="cut-lbl">&#x2702; Panduan Pemotongan Kertas</div><div class="cut-text">' + h.potong + '</div></div>' +
+      '</div></div></div>';
+  }).join('');
+
+  document.getElementById('main-content').innerHTML =
+    '<div class="edit-section" style="margin-bottom:16px">' +
+    '<div class="edit-header"><span class="edit-title">&#x1F50D; QC Umum — Wajib Dicek Semua Buket</span></div>' +
+    '<div class="edit-body">' + qcHtml + '</div></div>' +
+    '<div class="edit-section" style="margin-bottom:16px">' +
+    '<div class="edit-header"><span class="edit-title">&#x1F4B0; Navigasi Cepat per Harga</span></div>' +
+    '<div class="edit-body"><div class="nav-pills">' + navHtml + '</div></div></div>' +
+    hargaHtml;
+}
+
+function jumpTo(harga) {
+  var el = document.getElementById('h-' + harga);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ============ EDIT VIEW ============
+function renderEdit() {
+  var sop = getSop();
+  var qcHtml = sop.qcUmum.map(function(q) {
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:18px;flex-shrink:0;width:28px;text-align:center">' + q.icon + '</div>' +
+      '<div style="flex:1">' +
+      '<div class="fi"><label class="flb">Judul</label><input class="finp" value="' + q.judul.replace(/"/g,'&quot;') + '" id="qc-j-' + q.id + '"></div>' +
+      '<div class="fi"><label class="flb">Deskripsi</label><textarea class="ftxt" id="qc-i-' + q.id + '">' + q.isi + '</textarea></div>' +
+      '</div></div>';
+  }).join('');
+
+  var hargaHtml = sop.harga.map(function(h) {
+    return '<div class="harga-block" id="eh-' + h.harga + '">' +
+      '<div class="harga-title">' + h.emoji + ' ' + h.label + '</div>' +
+      '<div class="fg2">' +
+      '<div class="fi"><label class="flb">Jumlah Bunga</label><input class="finp" value="' + h.bunga.replace(/"/g,'&quot;') + '" id="s-bunga-' + h.harga + '"></div>' +
+      '<div class="fi"><label class="flb">Teknik Wrapping</label><input class="finp" value="' + h.teknik.replace(/"/g,'&quot;') + '" id="s-teknik-' + h.harga + '"></div>' +
+      '<div class="fi"><label class="flb">Kertas Wrapping</label><input class="finp" value="' + h.wrapping.replace(/"/g,'&quot;') + '" id="s-wrapping-' + h.harga + '"></div>' +
+      '<div class="fi"><label class="flb">Lebar Handle</label><input class="finp" value="' + h.handle.replace(/"/g,'&quot;') + '" id="s-handle-' + h.harga + '"></div>' +
+      '</div>' +
+      '<div class="fi"><label class="flb">QC Kunci</label><input class="finp" style="border-color:rgba(196,82,106,.4)" value="' + h.qc.replace(/"/g,'&quot;') + '" id="s-qc-' + h.harga + '"></div>' +
+      '<div class="fi"><label class="flb">Panduan Pemotongan Kertas</label><textarea class="ftxt" id="s-pot-' + h.harga + '">' + h.potong + '</textarea></div>' +
+      '</div>';
+  }).join('');
+
+  var navHtml = sop.harga.map(function(h) {
+    return '<span class="pill" onclick="document.getElementById(\'eh-' + h.harga + '\').scrollIntoView({behavior:\'smooth\'})">' + h.emoji + ' ' + (h.harga/1000) + 'K</span>';
+  }).join('');
+
+  document.getElementById('main-content').innerHTML =
+    '<div class="ibox">Edit SOP di bawah ini, lalu klik <b>Simpan Semua Perubahan</b> di bawah halaman.</div>' +
+    '<div class="edit-section" style="margin-bottom:16px">' +
+    '<div class="edit-header"><span class="edit-title">&#x1F50D; QC Umum</span></div>' +
+    '<div class="edit-body">' + qcHtml + '</div></div>' +
+    '<div class="edit-section" style="margin-bottom:16px">' +
+    '<div class="edit-header"><span class="edit-title">&#x1F4B0; Navigasi Cepat</span></div>' +
+    '<div class="edit-body"><div class="nav-pills">' + navHtml + '</div></div></div>' +
+    '<div class="edit-section">' +
+    '<div class="edit-header"><span class="edit-title">&#x1F4CB; SOP per Harga Buket</span></div>' +
+    '<div class="edit-body">' + hargaHtml + '</div></div>' +
+    '<div style="text-align:center;padding:20px 0">' +
+    '<button class="btn btn-p" onclick="saveAllSop()" style="padding:12px 32px;font-size:14px">&#x1F4BE; Simpan Semua Perubahan</button>' +
+    '</div>';
+}
+
+// ============ SAVE SOP ============
+function saveAllSop() {
+  var sop = JSON.parse(JSON.stringify(getSop()));
+
+  // Save QC
+  sop.qcUmum.forEach(function(q) {
+    var j = document.getElementById('qc-j-' + q.id);
+    var i = document.getElementById('qc-i-' + q.id);
+    if (j) q.judul = j.value;
+    if (i) q.isi = i.value;
+  });
+
+  // Save harga
+  sop.harga.forEach(function(h) {
+    var fields = ['bunga','teknik','wrapping','handle','qc','pot'];
+    var keys = ['bunga','teknik','wrapping','handle','qc','potong'];
+    fields.forEach(function(f, idx) {
+      var el = document.getElementById('s-' + f + '-' + h.harga);
+      if (el) h[keys[idx]] = el.value;
+    });
+  });
+
+  window._set(window._ref(window._db, 'sopData'), sop).then(function() {
+    window.sopLoaded = sop;
+    toast('✅ SOP berhasil disimpan!');
+  }).catch(function(e) {
+    toast('❌ Gagal: ' + e.message);
+  });
+}
+
+// ============ TOAST ============
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
